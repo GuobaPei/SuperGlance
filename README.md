@@ -1,17 +1,24 @@
 # SuperGlance: Driving at a Glance with a Vision-Language Model
 
-[Paper](TBD) | [QA data](https://huggingface.co/datasets/HF_ORG/SuperGlance-QA) | Weights:
-[SuperGlance-9B](https://huggingface.co/HF_ORG/SuperGlance-9B),
-[SuperGlance-9B-Stage1](https://huggingface.co/HF_ORG/SuperGlance-9B-Stage1),
-[SuperGlance-9B-Stage2](https://huggingface.co/HF_ORG/SuperGlance-9B-Stage2)
+[Project page](https://guobapei.github.io/SuperGlance/) | [Code](https://github.com/GuobaPei/SuperGlance) |
+Weights: [SuperGlance-9B](https://huggingface.co/pei2333/SuperGlance-9B),
+[SuperGlance-9B-Stage1](https://huggingface.co/pei2333/SuperGlance-9B-Stage1),
+[SuperGlance-9B-Stage2](https://huggingface.co/pei2333/SuperGlance-9B-Stage2) |
+QA data: [SuperGlance-QA](https://huggingface.co/datasets/pei2333/SuperGlance-QA)
 
-Authors: see the paper.
+SuperGlance turns a vision-language model (VLM) into a driving policy that plans in one forward pass. The model reads the
+front camera (the current frame and three past frames), the ego state and the navigation command. A linear Policy Head on
+the hidden state at the answer position scores a fixed set of candidate trajectories (8 poses at 2 Hz over 4 s), and the
+plan is the probability-weighted mean of the 64 most probable candidates at temperature 0.2. The same hidden
+state answers multiple-choice questions through the language-model head's option-letter logits, also without generating.
+The VLM is Qwen3.5-9B with rank-32 LoRA adapters, trained in three stages: multiple-choice question answering on general
+images and text (stage 1) and on driving scenes (stage 2) keeps the VLM's visual abilities; stage 3 trains the policy,
+first supervised toward a reward-weighted target over the candidates, then with reinforcement learning (RL) on the exact
+expected reward over all candidates.
 
-SuperGlance reads one hidden state of a vision-language model through two heads, each in one forward pass. The
-language-model head answers multiple-choice questions by its option-letter logits at the answer position. A linear
-Policy Head on the same hidden state scores a fixed set of candidate trajectories (8 poses, 2 Hz, 4 s), and the plan is
-the probability-weighted mean of the 64 most probable candidates at temperature 0.2. The VLM is Qwen3.5-9B with
-rank-32 LoRA adapters, trained in three stages:
+![SuperGlance: GPU time per plan (left), driving benchmarks (middle), question answering (right)](docs/teaser.png)
+
+*Figure 1 of the paper: GPU time per plan (left), the driving benchmarks (middle) and question answering (right).*
 
 | stage | data | objective | start | steps x rows |
 |---|---|---|---|---|
@@ -24,29 +31,9 @@ rank-32 LoRA adapters, trained in three stages:
 Stages 1 and 2 are merged into the model before the next stage; stage 3 trains one adapter and the Policy Head. All runs
 use 8 GPUs.
 
-## Repository layout
-
-```
-configs/      one config per training run (the values the paper's runs read) and the DeepSpeed ZeRO-2 file
-scripts/      train_stage{1,2,3}.sh; eval_{navsim,pai,wod,alpasim,l2d,qa}.sh; build_qa.sh, build_pools.sh (training data)
-superglance/
-  model/      prompt.py (option prompt, letter readout), history.py (past frames), merge.py (LoRA merge, CPU)
-  data/       qa.py + qa_pairs.py (stage-1/2 rows, two option orders), policy.py + policy_pairs.py (stage-3 rows, compact
-              pools, Policy Head readout), scene.py (scene row -> policy prompt), mixture.py, build_qa.py (released QA data)
-  objectives/ permutation.py: joint Brier policy gradient, soft log score, exact RL loss, KL
-  train/      qa.py (stages 1-2), policy.py (stage 3), rl_reference.py (the supervised policy's logits for RL's KL)
-  refit/      the Policy Head refit 5,121 -> 5,273: rows.py, fit.py (L-BFGS), extend_head.py, kin.py
-  eval/       features.py (hidden states at the answer position), readout.py (top-64 mean), heads.py, and per benchmark:
-              pai_*.py (PAI-AV), wod_*.py (WOD-E2E), qa_*.py (QA benchmarks)
-  executor/   pdm.py (NAVSIM PDM simulator, batched PDMS), sidecar.py + stitched.py (the closed-loop executor)
-  alpasim/    driver.py (AlpaSim driver service), clean.py, table.py, km.py, pair.py (916-scenario summaries)
-  builders/   qa/ (stage-1/2 question pools), pools/ (stage-3 pools, rewards, history frames)
-tests/        test_objective.py: CPU self-check of the objectives
-```
-
 ## Installation
 
-Training and inference (8 GPUs):
+Training and inference (8 GPUs for training, one for most evaluations):
 
 ```bash
 pip install -r requirements.txt
@@ -62,22 +49,40 @@ backward kernel under Triton 3.4.0 to 3.7.0, which give wrong results. The stage
 The paper's supervised stage-3 runs also loaded Liger kernels and causal-conv1d through a path overlay; the release uses
 the stock kernels, and `liger-kernel` and `causal-conv1d` are an optional speed-up.
 
-The executor, the NAVSIM rewards and the NAVSIM scene export run in a separate environment with the NAVSIM devkit v1.1
-and the nuPlan devkit, installed as NAVSIM describes. If NAVSIM's comfort scores come out all zero, set
-`OPENBLAS_CORETYPE=Haswell` (seen with numpy 1.23.4 / OpenBLAS 0.3.20 on Intel Sapphire Rapids CPUs).
+Other environments, installed as their projects describe:
+- NAVSIM devkit v1.1 with the nuPlan devkit: the executor (the PDM simulator), the NAVSIM rewards and scene export, and
+  the instruction rows. If NAVSIM's comfort scores come out all zero, set `OPENBLAS_CORETYPE=Haswell` (seen with numpy
+  1.23.4 / OpenBLAS 0.3.20 on Intel Sapphire Rapids CPUs).
+- AlpaSim with its `alpasim_grpc` package (closed loop), the PhysicalAI-AV devkit `physical_ai_av` (PAI-AV rows), the
+  `waymo-open-dataset` package (WOD-E2E), the Language2Drive SDK and its scorer (Language2Drive), and Qwen-Drive-1.0's
+  repository for its PAI-AV rows.
 
 Run every command from the repository root (`python -m superglance....`).
 
-## Data
+## Weights and data
+
+### Weights
+
+| repository | content | in the scripts |
+|---|---|---|
+| [SuperGlance-9B](https://huggingface.co/pei2333/SuperGlance-9B) | the final model (stage-3 RL): the merged model with its 5,273-row Policy Head, `candidates_k5273.npy`, and `adapter/`, the LoRA and Policy Head before the merge, which the paper's numbers were read with | `ADAPTER=<SuperGlance-9B>/adapter`, `CANDS=<SuperGlance-9B>/candidates_k5273.npy` |
+| [SuperGlance-9B-Stage2](https://huggingface.co/pei2333/SuperGlance-9B-Stage2) | the stage-2 model (driving QA), stage 3's base | `BASE` / `STAGE2` |
+| [SuperGlance-9B-Stage1](https://huggingface.co/pei2333/SuperGlance-9B-Stage1) | the stage-1 model (general QA), stage 2's base | `STAGE1` |
+
+```bash
+huggingface-cli download pei2333/SuperGlance-9B-Stage2 --local-dir weights/SuperGlance-9B-Stage2
+huggingface-cli download pei2333/SuperGlance-9B --local-dir weights/SuperGlance-9B
+```
 
 ### Stages 1 and 2: the QA dataset
 
-The questions are released as [SuperGlance-QA](https://huggingface.co/datasets/HF_ORG/SuperGlance-QA):
+The questions are released as [SuperGlance-QA](https://huggingface.co/datasets/pei2333/SuperGlance-QA):
 
 ```
 stage1/train/<source>.jsonl    one file per source with its released rows
 stage2/train/<source>.jsonl
-counts.json                    per source: rows (the paper's), uploaded (released), held (why rows are not, or null)
+counts.json                    per source and stage: rows (trained on), uploaded (released), held (why the others are not)
+SCHEMA.md                      every field
 images/text/blank.png          the blank image of the text-only questions
 build/build_images.py          writes every other image from its source dataset's public release (build/README.md)
 ```
@@ -88,31 +93,34 @@ shuffled once with a fixed seed), `gold_index`, `source`, `sampling_task` and `s
 carry `yes_index`; the remaining fields (ids, the source's own options and answer, image references for the image build)
 are kept and ignored by the trainer.
 
-Four sources are not in the dataset: we used them as published, with their own options, so they come from their original
-releases:
-[SAT](https://huggingface.co/datasets/array/SAT-v2) (`SAT`),
+A question is released when we generated its options or its question. The questions we used as published, with the
+source's own question and options, are not:
+all of [SAT](https://huggingface.co/datasets/array/SAT-v2) (`SAT`),
 [Social IQa](https://huggingface.co/datasets/allenai/social_i_qa) (`text_siqa`),
 [PIQA](https://huggingface.co/datasets/ybisk/piqa) (`text_piqa`) and AI2D from
-[The Cauldron](https://huggingface.co/datasets/HuggingFaceM4/the_cauldron) (`ai2d`).
-GQA, ChartQA and the yes/no rows built from Social IQa and PIQA questions are in the dataset, since we processed them.
-The four sources are rebuilt from those releases with the stage-1 builders (Building the training data, below), not
-dropped: option shifts and mixture draws are keyed by line number, so a missing source, or a zero weight in its place,
-changes every other row's options and draws. The trainers stop when a source of the mixture has no rows, and `build_qa`
-writes nothing while a source is incomplete (`--allow-incomplete` writes the released rows alone, for a smoke test):
+[The Cauldron](https://huggingface.co/datasets/HuggingFaceM4/the_cauldron) (`ai2d`), and the source's own yes/no questions
+of GQA and of ChartQA (from The Cauldron).
+`counts.json` gives the numbers per source. They are rebuilt from their original releases with the stage-1 and stage-2
+builders (Building the training data), not dropped: the train/dev split, the de-duplication and every line number depend
+on all sources, and option shifts and mixture draws are keyed by line number. `build_qa` takes each released row and fills
+every other line from the rebuilt pool, after checking every source's counts against `counts.json` and that each released
+row sits on the rebuilt pool's line with the same id:
 
 ```bash
-python -m superglance.data.build_qa --hf <dataset snapshot> --stage 1 --out data/stage1   # train.jsonl
-python <dataset snapshot>/build/build_images.py data/stage1                              # data/stage1/images/
+ROOT=data/qa bash scripts/build_qa.sh                       # the pools, from the public sources (Building the training data)
+python -m superglance.data.build_qa --hf <dataset snapshot> --stage 1 --rebuilt data/qa/stage1_adapted_g_20260926 --out data/stage1
+python -m superglance.data.build_qa --hf <dataset snapshot> --stage 2 --rebuilt data/qa/stage2_drivelm_20260925 --out data/stage2
+python <dataset snapshot>/build/build_images.py <dataset snapshot> data/stage1 --stage stage1 ...   # the released rows' images
 ```
 
-With every source complete, `train.jsonl` is the paper's training file row for row. The development split is not
+The result is the paper's `train.jsonl` row for row. Without `--rebuilt`, `build_qa` writes nothing while a source is not
+released in full (`--allow-incomplete` writes the released rows alone, for a smoke test). The development split is not
 released: without `dev.jsonl` the trainer runs no evaluation and keeps the last step, the checkpoint both of the paper's QA
-runs selected on their development split. Stage 2's mixture includes stage-1 questions, which its source files repeat.
-The DriveLM test questions of our scene split are not released either.
+runs selected on their development split. The DriveLM test questions of our scene split are not released either.
 
 ### Stage 3: policy pools
 
-Stage 3 trains on pools built from NAVSIM (navtrain), PAI-AV and WOD-E2E, which their licenses do not let us
+Stage 3 trains on pools built from NAVSIM (navtrain and OpenScene), PAI-AV and WOD-E2E, which their licenses do not let us
 redistribute, plus QA replay rows (the stage-2 questions, held sources included). `scripts/build_pools.sh` rebuilds them
 (Building the training data). A pool directory holds `train.jsonl` and `dev.jsonl` and, per manifest stem, memory-mapped
 arrays with one row per policy row:
@@ -136,13 +144,27 @@ A policy row has:
 
 K is 5,121 for the supervised pools and 5,273 for RL.
 
-## Weights
+### Candidates
 
-| repository | model |
-|---|---|
-| [SuperGlance-9B](https://huggingface.co/HF_ORG/SuperGlance-9B) | the final model (stage-3 RL, with its 5,273-row Policy Head) |
-| [SuperGlance-9B-Stage1](https://huggingface.co/HF_ORG/SuperGlance-9B-Stage1) | the stage-1 model (general QA) |
-| [SuperGlance-9B-Stage2](https://huggingface.co/HF_ORG/SuperGlance-9B-Stage2) | the stage-2 model (driving QA), stage 3's base |
+The library has 5,121 candidates: k-means 4,096 over the 4-s futures of NAVSIM's training scenes, one standing-still
+trajectory, and 1,024 high-speed candidates from k-means over PAI-AV rows at 13 m/s or more. Before RL it grows to 5,273
+with 152 candidates built by rule (84 braking, 68 medium-speed curves and ramps). `scripts/build_candidates.sh` builds both
+(Building the training data); `candidates_k5273.npy` in SuperGlance-9B is the 5,273-candidate library, and its first 5,121
+rows are the supervised library.
+
+## Quick start
+
+CPU self-checks (about a minute), then the final model on PAI-AV open loop (one GPU), which prints Table 6's row:
+
+```bash
+python -m pytest -q tests
+PAI_ROOT=<PhysicalAI-AV root> GOLD=<1005_7cam_gold_eval_metadb_public.parquet> BASE=weights/SuperGlance-9B-Stage2 \
+  ADAPTER=weights/SuperGlance-9B/adapter CANDS=weights/SuperGlance-9B/candidates_k5273.npy bash scripts/eval_pai.sh
+```
+
+The one-plan ADE at 3 s / 5 s is the `mean` line of `runs/pai/one_superglance_test.txt`, the best of six is `min6` in
+`runs/pai/ade_superglance_test.txt` (PAI-AV open loop, below). The other benchmarks run the same way, with the
+inputs their sections name.
 
 ## Training
 
@@ -167,8 +189,8 @@ POOL_SFT=<pool> POOL_LAST=<pool> POOL_RL=<pool> CANDS=<5,121 candidates> REFIT_R
 ### Head refit
 
 Between the last supervised phase and RL, the Policy Head is widened from 5,121 to 5,273 rows on the last phase's
-features (`refit` step): `superglance.eval.features` on five sets (navtrain fit and held-out scenes, a PAI-AV subset, navtest,
-PAI-AV val and test), an L-BFGS fit of the 152 new rows with the language model and the old rows frozen
+features (`refit` step): `superglance.eval.features` on five sets (navtrain fit and held-out scenes, a PAI-AV subset,
+navtest, PAI-AV val and test), an L-BFGS fit of the 152 new rows with the language model and the old rows frozen
 (`superglance.refit.fit`: each new row starts from its nearest old candidate's row with the bias lowered by 4; L2 weights
 1e-1, 1e-2 and 1e-3, chosen on the navtrain held-out PDMS and the PAI-AV check ADE), the widened adapter
 (`superglance.refit.extend_head`), and a stop rule: navtest PDMS at most 0.1 below the 5,121-row head's and PAI-AV val
@@ -176,22 +198,55 @@ ADE@3 s at most 0.005 m above it. `REFIT_ROWS` comes from `superglance.refit.row
 candidates, the navtrain targets over them, the PAI-AV subset and the candidate score tables that `superglance/refit/fit.py`
 names. `REFIT` defaults to the step's output; set it to start `reference` and `rl` from another 5,273-row adapter.
 
+### Ablations
+
+`scripts/train_ablation.sh <row>` trains one row of the ablation tables. Each row is a stage-3 step with one switch: a
+config of `configs/ablations/` (checked against its release config to differ in exactly that switch), a pool, the start
+model, or the trainer module (`superglance.ablations.regression`, `.text`, `.rl_estimators`). The script's header lists
+every row and its inputs:
+
+| table | rows |
+|---|---|
+| Table 8, Output and target | `text`, `regression`, `imitation_history`, `reward_history` |
+| supplement, One change at a time | `reward_history`, `reward_current`, `no_rollout_rows`, `imitation_history`, `regression`, `no_wod_rows`, `no_pai_rows`, `no_stages12`, `no_question_data`; "No PDM simulator" is the main model under `scripts/eval_alpasim.sh` with `EXEC=plan` |
+| supplement, RL step | `reward_current` (no RL), `rl_sampled`, `rl_exact_normalized`, `rl_exact`, `rl_exact_beta01`, `rl_imitation` |
+| supplement, AlpaSim results by training recipe | `imitation_current`, `imitation_history`, `reward_current`, `reward_history`, the RL rows, `rl_original_set`, and the main models |
+| Table 7, no instruction rows | `no_instruction_rows` |
+
+The imitation pools come from `NAV_TARGET=imitation bash scripts/build_pools.sh ...`, the current-frame pools from its
+`stage_cf` step, and the regression and text rows need the trajectory targets first
+(`python -m superglance.ablations.traj_targets`). Each RL start model needs its own pool directory, as the KL reference
+`train_ref.npy` is written into it. A row's adapter is evaluated as the main model's (Evaluation), with `CANDS` the 5,121
+library and `HIST=0` for the current-frame rows. The paper's ablation rows were trained with the stage-1/2 objective as
+implemented before its correction (supplement, "Objective"), except the supervised model without instruction rows; the
+release has the corrected objective, so a rerun gives these rows on the corrected models.
+
 ## Evaluation
 
-The plan is read from the Policy Head as the softmax-weighted mean (temperature 0.2) of the 64 most probable candidates'
-poses (`superglance.eval.readout`). In closed loop the executor runs the plan through NAVSIM's PDM simulator from the car's
-current state, starting from the steering angle reached under the previous plan unless that angle is more than 0.2 rad
-from the yaw-rate estimate (then from the estimate), and returns 40 poses 0.1 s apart (`python -m
-superglance.executor.stitched`, JSON lines on stdin and stdout; `--check` tests it).
+The plan is read from the Policy Head as the softmax-weighted mean (temperature 0.2) of the 64 most probable
+candidates' poses (`superglance.eval.readout`). In closed loop the executor runs the plan through NAVSIM's PDM simulator
+from the car's current state, starting from the steering angle reached under the previous plan unless that angle is more
+than 0.2 rad from the yaw-rate estimate (then from the estimate), and returns 40 poses 0.1 s apart
+(`python -m superglance.executor.stitched`, JSON lines on stdin and stdout; `--check` tests it).
 
-| paper | script |
-|---|---|
-| Table 2 (QA benchmarks) | `scripts/eval_qa.sh` |
-| Table 4 (NAVSIM navtest) | `scripts/eval_navsim.sh` |
-| Table 3, Fig. 6 (AlpaSim closed loop) | `scripts/eval_alpasim.sh` |
-| Table 5 (WOD-E2E test) | `scripts/eval_wod.sh` (writes the submission; the server scores it) |
-| Table 6 (PAI-AV open loop) | `scripts/eval_pai.sh` |
-| Table 7 (Language2Drive) | `scripts/eval_l2d.sh` |
+| paper | script | status |
+|---|---|---|
+| Table 2, base and stages 1-3 | `scripts/eval_qa.sh`, then `python -m superglance.eval.qa_table` | reproducible |
+| Table 2, Qwen-Drive-1.0 | `scripts/eval_qa.sh` on its weights as a plain VLM | partly: the weight conversion is not included |
+| Table 2, decoded replies; supplement, Letter and decoded replies | - | not included |
+| Table 3, our rows; Fig. 6 bottom, our lags | `scripts/eval_alpasim.sh` (`DELAY_US`) | reproducible |
+| Table 3 and Fig. 6, Qwen-Drive-1.0's rows | - | not included (its AlpaSim driver) |
+| Fig. 6 top; supplement, Time per plan | - | not included (the latency harness) |
+| Table 4 | `scripts/eval_navsim.sh` | reproducible |
+| Table 5 | `scripts/eval_wod.sh` | reproducible (the challenge server scores the package) |
+| Table 6 | `scripts/eval_pai.sh`; Qwen-Drive-1.0's rows `scripts/eval_pai_qwen_drive.sh` | reproducible |
+| Table 7 | `scripts/l2d_run.sh`, then `scripts/eval_l2d.sh` | reproducible (the SDK and the scorer are external) |
+| Table 8 and the supplement's ablation tables | `scripts/train_ablation.sh`, then the evaluation scripts | Policy Head rows reproducible; text and regression rows: training only, their readouts are not included |
+| supplement, Coverage of NAVSIM scenes | `scripts/build_candidates.sh coverage` | partly: needs the held-out scene lists and the 5,273 candidates' scores on them |
+| supplement, at-fault collision counts | `superglance.alpasim.collisions` (last step of `scripts/eval_alpasim.sh`) | reproducible |
+| supplement, readout k and temperature | `python -m superglance.eval.pai_topk` | reproducible |
+| supplement, frozen features | - | not included |
+| the figures | - | the plotting scripts are not included; the data of Figs. 5c, 6 (bottom) and 7 and of the supplement's closed-loop and qualitative figures are outputs of the scripts above |
 
 ### NAVSIM navtest
 
@@ -204,23 +259,6 @@ BASE=<stage-2 model> ADAPTER=<adapter> CANDS=<candidates> NAVTEST=<navtest scene
 `superglance.builders.pools.history_nav`'s output. The script extracts the features with the past frames (a scene without
 all three reads its current frame alone), reads the plan and scores it with the NAVSIM v1.1 PDM scorer; the `mean` line
 is the paper's readout, printed beside argmax and medoid.
-
-### PAI-AV open loop
-
-```bash
-PAI_ROOT=<PhysicalAI-AV root> GOLD=<1005_7cam_gold_eval_metadb_public.parquet> BASE=<stage-2 model> ADAPTER=<adapter> \
-  CANDS=<candidates> bash scripts/eval_pai.sh
-```
-
-Our version of a 700-frame leakage-free subset: the 140 test clips of the public gold eval list of the alpamayo recipes,
-five frames per clip at 5.1 s + (-2 ... 2) s. `PAI_ROOT` holds `clip_index.parquet`, `camera/camera_front_wide_120fov/`,
-`labels/egomotion*/` and `calibration/` as the dataset ships them. Steps: rows (`superglance.eval.pai_rows`: the front wide
-frame re-projected to nuPlan's CAM_F0, ego history, velocity, command, the logged future at 10 Hz), past frames
-(`pai_history`; `HIST=0` for a model without them), features, ADE (`pai_ade`). `runs/pai/ade_<NAME>_test.txt` has the argmax
-(`top1`) and the six most probable candidates (`avg6`, `min6`) at 3 s / 5 s over the 700 frames and the 140 T0 frames, beside
-the oracle candidate and constant velocity. Table 6's best-of-six cells are `min6`. Its one-plan cells read the top-64 mean
-densified by a cubic spline from the logged velocity, a step not in this release. `SPLIT=val GOLD=-` builds the validation
-rows.
 
 ### WOD-E2E test
 
@@ -236,11 +274,54 @@ submission package per readout (`runs/wod/sub/`). It uploads nothing: it prints 
 account, method and author fields, and the filled `mean02` package is uploaded on the challenge page. Table 5's row is the
 server's RFS and ADE of that package.
 
+### PAI-AV open loop
+
+```bash
+PAI_ROOT=<PhysicalAI-AV root> GOLD=<1005_7cam_gold_eval_metadb_public.parquet> BASE=<stage-2 model> ADAPTER=<adapter> \
+  CANDS=<candidates> bash scripts/eval_pai.sh
+```
+
+Our version of a 700-frame leakage-free subset: the 140 test clips of the public gold eval list of the alpamayo recipes,
+five frames per clip at 5.1 s + (-2 ... 2) s. `PAI_ROOT` holds `clip_index.parquet`, `camera/camera_front_wide_120fov/`,
+`labels/egomotion*/` and `calibration/` as the dataset ships them. Steps: rows (`superglance.eval.pai_rows`: the front wide
+frame re-projected to nuPlan's CAM_F0, ego history, velocity, command, the logged future at 10 Hz), past frames
+(`pai_history`; `HIST=0` for a model without them), features, ADE (`pai_ade`) and the one-plan readout (`pai_readout`).
+`runs/pai/ade_<NAME>_test.txt` has the argmax (`top1`) and the six most probable candidates (`avg6`, `min6`) at 3 s / 5 s
+over the 700 frames and the 140 T0 frames, beside the oracle candidate and constant velocity; Table 6's best-of-six cells
+are `min6` over all frames. Its one-plan cells are the `mean` line of `runs/pai/one_<NAME>_test.txt`: the top-64 mean at
+temperature 0.2, densified to the log's 10 Hz by a cubic spline through the origin and the 8 poses, clamped at the logged
+velocity at 0 s and natural at 4 s, with 4-5 s linear (`superglance.eval.pai_decode`); the argmax, densified linearly, is
+printed beside it. `SPLIT=val GOLD=-` builds the validation rows.
+
+The supplement's readout settings come from the validation rows and each model's features:
+
+```bash
+python -m superglance.eval.pai_topk runs/pai/pai_openloop_val.jsonl runs/pai/topk_val.json 0.2 1,32,64,128,256,1024,all \
+  sft=<features dir>=<candidates> rl=<features dir>=<candidates>
+```
+
+prints ADE at 3 s / 5 s per k, paired against k = 64 and against the argmax, with 95 % intervals over logs. The temperature
+was chosen with k = 64 at 1, 0.5, 0.2, 0.1, 0.05 and 0.02 (one call per temperature, `64` as the k list).
+
+Table 6's Qwen-Drive-1.0 rows run its released code on the frames of our rows:
+
+```bash
+QD_PY=<python of Qwen-Drive-1.0's environment> QD_REPO=<Qwen-Drive-1.0 checkout> QD_MODEL=<Qwen-Drive-1.0-4B> \
+  PAI_ROOT=<PhysicalAI-AV root> bash scripts/eval_pai_qwen_drive.sh runs/pai/pai_openloop_test.jsonl runs/pai/qwen_drive "0 1"
+```
+
+`superglance.eval.qd_pai_scenes` writes the frames in its scene format (front wide and both cross cameras, four frames 0.5 s
+apart, the trajectory from the online egomotion, our driving command); its `run_planning.py` plans six samples per frame
+with each planner in reasoning mode, sharded over the given GPUs; `superglance.eval.qd_pai_score` scores them with its own
+metric code against our ground truth. Table 6 reads the `GT ours all` line: one plan = sample 0, best of six = minADE. The
+environment needs Qwen-Drive-1.0's requirements and `physical_ai_av`; `PAI_ROOT` needs `camera_cross_left_120fov` and
+`camera_cross_right_120fov` besides the front wide camera.
+
 ### AlpaSim closed loop
 
 ```bash
 BASE=<stage-2 model> ADAPTER=<RL adapter> CANDS=<5,273 candidates> ALPASIM=<AlpaSim checkout> DATA=<AlpaSim data folder> \
-  NAVSIM_PYTHON=<python of the NAVSIM environment> ALPASIM_RUN=<command> bash scripts/eval_alpasim.sh
+  NAVSIM_PYTHON=<python of the NAVSIM environment> NRE_RUN=<renderer runner> bash scripts/eval_alpasim.sh
 ```
 
 Install AlpaSim with the PAI-AV-NuRec 26.01 scenes (suite `public_2601`, 916 scenarios), its data folder and its
@@ -248,17 +329,29 @@ Install AlpaSim with the PAI-AV-NuRec 26.01 scenes (suite `public_2601`, 916 sce
 driver plans at every call: the front wide camera re-projected into CAM_F0, the frames 1.5 / 1.0 / 0.5 s back, the training
 prompt, the top-64 mean, executed by the PDM simulator (the executor above, a sidecar in the NAVSIM environment); AlpaSim's
 controller tracks the 40 executed poses. Four drivers run on `DRIVER_GPUS` (default 0-3), AlpaSim's renderer and physics on
-`SIM_GPUS` (4-7). The script calls AlpaSim's wizard with the paper's settings and `wizard.run_method=NONE`; `ALPASIM_RUN`
-runs the generated config dir (it gets the run dir as its argument and `GPUS`, `NRE_D`, `A` in the environment). It prints
-the cleaned summary, the table row (collisions all / at fault, off-road, progress, km per incident, mean score, pass) and km
-per at-fault incident with its 95 % interval; `REF=<another run's results-summary.clean.json>` adds the paired differences.
-Checks without a GPU: `python -m superglance.alpasim.driver --selftest`.
+`SIM_GPUS` (4-7). The script calls AlpaSim's wizard with the paper's settings and `wizard.run_method=NONE`;
+`scripts/alpasim_services.sh` then starts the generated config's services as the paper's runs did: a renderer and a physics
+server per endpoint on `SIM_GPUS`, AlpaSim's controller, then its runtime, which returns when the rollouts are done. The
+renderer is AlpaSim's NRE 26.04 image with the preset's command minus `--enable-harmonizer`, rendering the front wide camera
+only. `NRE_RUN` runs a command inside that image on one GPU (`$NRE_RUN <gpu index> <command ...>`, with `NRE_DATA` = the
+data folder's `nre-artifacts/` bound at the image's data mount point, the prefix of `data_dir` in the generated config). The
+host side reaches the data through a link at that mount point, so the account needs write access there.
+`ALPASIM_RUN=<command>` replaces the runner (it gets the run dir as its argument and `GPUS`, `NRE_D`, `A` in the
+environment).
+
+The script prints the cleaned summary, the table row (collisions all / at fault, off-road, progress, km per incident,
+mean score, pass) and km per at-fault incident with its 95 % interval; `REF=<another run's results-summary.clean.json>`
+adds the paired differences. The last step reads the at-fault collisions from the rollout logs
+(`superglance.alpasim.collisions`, in AlpaSim's environment): `runs/alpasim/collisions.jsonl` has one row per scenario with
+an at-fault collision, and the closing line counts the supplement's numbers: scenarios with an at-fault collision, front
+hits on a stopped actor (at most 0.5 m/s 2 s before contact) and on a moving one. Checks without a GPU:
+`python -m superglance.alpasim.driver --selftest`.
 
 | paper | run |
 |---|---|
 | Table 3, no delay: RL / supervised model | `DELAY_US=0`, with the RL adapter and 5,273 candidates / the last supervised phase and 5,121 |
-| Table 3, delay = our GPU time | `DELAY_US=84000` (the simulator rounds it up to 100 ms) |
-| Fig. 6, lag ratios | `DELAY_US` = 0, 84000, 300000, 518000, 1200000, 2000000, 5000000; ratios with `REF` = the no-delay run |
+| Table 3, delay = our GPU time per plan | `DELAY_US=84000` (the simulator rounds it up to 100 ms) |
+| Fig. 6, lags | `DELAY_US` = 0, 84000, 300000, 518000, 1200000, 2000000, 5000000; ratios with `REF` = the no-delay run |
 | supplement, without the PDM simulator / without past frames | `EXEC=plan` / `HIST=0` |
 
 The 916 scenarios run as one run; the paper's runs split them into four quarters and merged the summaries, which gives the
@@ -267,13 +360,21 @@ same metrics per scenario with a fixed configuration.
 ### Language2Drive (NAVSIM track)
 
 ```bash
-L2D_SCORER=<the benchmark's scoring folder> bash scripts/eval_l2d.sh final=<package dir> [noinst=<package dir> ...]
+BASE_MODEL=<stage-2 model> ADAPTER=<final adapter> CANDS=<its candidates> TAG=final \
+  L2D_EVAL=<the SDK workspace's .l2d/evaluation.json> L2D_CLI=<the SDK environment's language2drive> \
+  SDK_PKG=<folder with the SDK's l2d_benchmark package> bash scripts/l2d_run.sh
+L2D_SCORER=<the benchmark's scoring folder> bash scripts/eval_l2d.sh final=runs/l2d_runs/final/package/l2d_navsim_final_<yyyymmdd>
 ```
 
-A package holds one model's two runs on the 38 PCUs in four wordings, as the Language2Drive SDK writes them. The script
-scores each run with the benchmark's scorer and prints SemSISR, SemCFPS, SCS and PCS, the equal-weight mean over the wordings
-(`runs/l2d/`). Table 7: "SuperGlance" is the final model's `_mean`, "no instruction" its `_mean_noinstr`. Running the SDK on
-our model, the step that writes a package, is not part of this release.
+`scripts/l2d_run.sh` runs the Language2Drive SDK on one adapter as the paper's runs did. The SDK's model service loads
+`superglance/l2d/adapter.py` (the training prompt, the top-64 mean at temperature 0.2) twice on one GPU: with the
+instruction appended to the prompt, and without it (the control). The SDK's own runner then sends the NAVSIM track's 38
+PCUs in four wordings to each (304 requests; `OPENBLAS_CORETYPE=Haswell`, as in Installation). The script checks the
+outputs (304 scheduled, 0 failed, four wordings of 38 PCUs), adds the argmax readout of both runs from the adapter's
+traces and writes the package. The model service runs in the training environment (`PY`), the runner in the SDK's.
+`scripts/eval_l2d.sh` scores each run of a package with the benchmark's scorer and prints SemSISR, SemCFPS, SCS and PCS, the
+equal-weight mean over the wordings (`runs/l2d/`). Table 7: "SuperGlance" is the final model's `_mean`, "no instruction" its
+`_mean_noinstr`, "no instruction rows" the `_mean` of the `no_instruction_rows` ablation.
 
 ### Question answering
 
@@ -289,16 +390,34 @@ benchmarks, the DriveLM test questions of our scene split). The readout is the o
 non-thinking chat prefix, with no generation. `python -m superglance.eval.qa_table <OUT> ...` prints Table 2's rows for the
 given runs.
 
+## Main results
+
+The final model, SuperGlance-9B, as reported in the paper:
+
+| benchmark | metric | SuperGlance-9B |
+|---|---|---|
+| NAVSIM v1.1 navtest (Table 4) | PDMS | 91.5 |
+| WOD-E2E test (Table 5) | RFS / ADE 3 s / ADE 5 s (m) | 7.99 / 1.19 / 2.55 |
+| PAI-AV open loop (Table 6) | ADE 3 s / 5 s (m), one plan | 0.373 / 1.076 |
+| AlpaSim, 916 scenarios (Table 3), no delay | km per at-fault incident / pass (%) | 1.318 / 73.5 |
+| AlpaSim, delay = GPU time per plan | km per at-fault incident / pass (%) | 1.248 / 72.2 |
+| Language2Drive, NAVSIM track (Table 7) | PCS | 56.5 |
+| DriveLM / 3DSRBench / CV-Bench (Table 2) | accuracy (%) | 85.51 / 58.29 / 87.40 |
+| GPU time per plan (one H200) | ms | 84 |
+
 ## Building the training data
 
-`superglance/builders/` holds the code that built the training data: `qa/` the stage-1 and stage-2 question pools, `pools/`
-the stage-3 pools. `scripts/build_qa.sh` and `scripts/build_pools.sh` run the builders in the order the paper's data was
-built (pass step names to run part of it); their headers list every input. Hugging Face downloads use `HF_ENDPOINT` when it
-is set.
+`superglance/builders/` holds the code that built the training data: `qa/` the stage-1 and stage-2 question pools,
+`candidates/` the candidate library, `shards/` and `instructions/` the stage-3 source shards, `pools/` the stage-3 pools.
+`scripts/build_qa.sh`, `scripts/build_candidates.sh` and `scripts/build_pools.sh` run them in the order the paper's data
+was built (pass step names to run part of it); their headers list every input. Hugging Face downloads use `HF_ENDPOINT`
+when it is set.
 
 ```bash
 ROOT=<data dir> TALLYQA_URL=<tallyqa.zip of the TallyQA release> DRIVELM_QA=<v1_1_train_nus.json> \
   DRIVELM_IMAGES=<DriveLM-nuScenes train images> bash scripts/build_qa.sh
+NAV_INPUTS=<navtrain_inputs.jsonl> PAI_FIT_ROWS=<PAI-AV rows> E2E_INPUTS=<e2e_inputs.npz> EVAL_KEYS=<eval_keys.json> \
+  bash scripts/build_candidates.sh kmeans fast kprime
 OUT=<dir> CANDS=<5,121 candidates> CANDS_KP=<5,273 candidates> <inputs> bash scripts/build_pools.sh
 ```
 
@@ -306,7 +425,7 @@ OUT=<dir> CANDS=<5,121 candidates> CANDS_KP=<5,273 candidates> <inputs> bash scr
 |---|---|---|
 | `sat` | SAT rows: 50,000 train, 2,000 dev | SAT-v2 |
 | `evals` | CV-Bench, BLINK and 3DSRBench manifests (Table 2), also the reference for de-duplication | CV-Bench, BLINK, 3DSRBench |
-| `supplement`, `sources` | GQA, Visual Genome, TallyQA; SAT train and The Cauldron's AI2D, TallyQA, ChartQA, TextVQA | |
+| `supplement`, `mc`, `sources` | GQA, Visual Genome, TallyQA; GQA typed queries, TallyQA counts and AI2D as multiple choice with the shared image split; SAT train and The Cauldron's AI2D, TallyQA, ChartQA, TextVQA | |
 | `perspective`, `adapt` | SAT perspective rows; every source as choice rows, with splits and one image store | the above |
 | `flips` | relation-flip minimal pairs | GQA |
 | `e` | box-choice and spatial-relation rows, perceptual-hash de-duplication against the evaluation images | OpenImages V5, SpatialSense |
@@ -314,38 +433,94 @@ OUT=<dir> CANDS=<5,121 candidates> CANDS_KP=<5,273 candidates> <inputs> bash scr
 | `g` | the stage-1 pool: "directly above" pairs and rows with a "none of the other options" choice | OpenImages |
 | `s2` | the stage-2 pool: the stage-1 questions plus DriveLM box-choice, relation and question rows | DriveLM-nuScenes v1.1 |
 
-`build_pools.sh` steps: `export` (NAVSIM v1.1 scene export and metric caches, NAVSIM environment), `score` (every candidate on
-every navtrain scene with the PDM scorer), `wod` (WOD-E2E rows), `qa` (QA replay), `dev`, `merge`, `clean` (drops every
+`build_candidates.sh` steps: `kmeans` (4,096 clusters of the navtrain fit scenes' futures, plus standing still), `fast`
+(1,024 high-speed candidates: `cands_k4097_fast1024.npy`, 5,121), `kprime` (the 152 rule-built candidates:
+`cands_k5273_v2.npy`, 5,273) and `coverage` (the supplement's coverage table on the held-out navtrain scenes).
+
+`build_pools.sh` steps, in order: `export` (NAVSIM v1.1 scene export and metric caches, NAVSIM environment), `score` (every
+candidate on every navtrain scene with the PDM scorer), `shards` (the source shards: navtrain with imitation and PDMS-score
+targets, OpenScene frames outside navtrain, PAI-AV human rows, rollout rows, instruction rows built with the
+Language2Drive verifier, the QA subset), `wod` (WOD-E2E rows), `qa` (QA replay), `dev`, `merge`, `clean` (drops every
 training row of an evaluation set: PAI-AV evaluation clips and test split, the AlpaSim 916 scenes, navtest tokens and logs,
-WOD-E2E val and test), `history` (front-camera frames 1.5, 1.0 and 0.5 s back), `stage` (the supervised pool), `last` (the
-last-phase pool) and `rl` (the 5,273 candidates' reward columns of the RL pool). Targets: NAVSIM scenes softmax((PDMS x DDC -
-0.1 ADE) / 0.1); other NAVSIM frames and WOD-E2E softmax(-ADE / 1 m); PAI-AV softmax(-ADE / 0.5 m); last phase, WOD-E2E rows
-softmax(R / 0.5 - (ADE - min ADE) / 1 m), R the RFS with the logged future as the only rated trajectory. Some inputs of
-`merge` (the navtrain, OpenScene, PAI-AV and instruction shards) come from builders that are not part of this release; the
-header of `build_pools.sh` names them.
+WOD-E2E val and test), `paihist` and `history` (front-camera frames 1.5, 1.0 and 0.5 s back), `stage` (the supervised
+pool), `last` (the last-phase pool), `rlpool` (the RL pool with the 5,121 candidates' rewards) and `rl` (the 5,273
+candidates' reward columns). Targets: NAVSIM scenes softmax((PDMS x DDC - 0.1 ADE) / 0.1); other NAVSIM frames and WOD-E2E
+softmax(-ADE / 1 m); PAI-AV softmax(-ADE / 0.5 m); last phase, WOD-E2E rows softmax(R / 0.5 - (ADE - min ADE) / 1 m), R the
+RFS with the logged future as the only rated trajectory. `NAV_TARGET=imitation` builds the ablations' imitation pools and
+`stage_cf` the current-frame pool. Some inputs are earlier pools and run outputs of the paper's data build (the rollout
+rounds, the recovery labels, earlier PAI-AV rows and the RL pool's earlier inputs); the script's header names each one,
+and these steps reproduce the paper's pools only from those files.
+
+## Repository layout
+
+```
+configs/      one config per training run (the values the paper's runs read), ablations/ (one switch each), DeepSpeed ZeRO-2
+scripts/      train_stage{1,2,3}.sh, train_ablation.sh; eval_{navsim,pai,wod,alpasim,l2d,qa}.sh, eval_pai_qwen_drive.sh,
+              l2d_run.sh, alpasim_services.sh; build_qa.sh, build_candidates.sh, build_pools.sh (training data)
+superglance/
+  model/      prompt.py (option prompt, letter readout), history.py (past frames), merge.py (LoRA merge, CPU)
+  data/       qa.py + qa_pairs.py (stage-1/2 rows, two option orders), policy.py + policy_pairs.py (stage-3 rows, compact
+              pools, Policy Head readout), scene.py (scene row -> policy prompt), mixture.py, build_qa.py (released QA data)
+  objectives/ permutation.py: joint Brier policy gradient, soft log score, exact RL loss, KL
+  train/      qa.py (stages 1-2), policy.py (stage 3), rl_reference.py (the supervised policy's logits for RL's KL)
+  refit/      the Policy Head refit 5,121 -> 5,273: rows.py, fit.py (L-BFGS), extend_head.py, kin.py
+  eval/       features.py (hidden states at the answer position), readout.py (top-64 mean), heads.py, and per benchmark:
+              pai_*.py and qd_pai_*.py (PAI-AV), wod_*.py (WOD-E2E), qa_*.py (QA benchmarks)
+  executor/   pdm.py (NAVSIM PDM simulator, batched PDMS), sidecar.py + stitched.py (the closed-loop executor)
+  alpasim/    driver.py (AlpaSim driver service), clean.py, table.py, km.py, pair.py, collisions.py (916-scenario summaries)
+  l2d/        adapter.py (Language2Drive SDK adapter), configs.py, argmax.py, package.py
+  ablations/  regression.py, text.py, traj_targets.py, rl_estimators.py (the ablation rows' trainers)
+  builders/   qa/ (stage-1/2 question pools), candidates/ (candidate library), shards/ and instructions/ (stage-3 source
+              shards), pools/ (stage-3 pools, rewards, history frames)
+tests/        CPU self-checks
+docs/         teaser.png
+```
 
 ## Self-checks
 
 ```bash
-python tests/test_objective.py                   # CPU, about 10 s; needs torch and Pillow
-python -m superglance.alpasim.driver --selftest  # geometry, camera re-projection, past frames
-python -m superglance.executor.stitched --check  # NAVSIM environment
+python -m pytest -q tests                         # CPU, about a minute; needs torch and Pillow
+python -m superglance.executor.stitched --check   # NAVSIM environment
 ```
 
-The first checks the stage-1/2 estimator against the exact gradient for 2 to 9 options and every option shift, including
-the shifts where reading the shifted view's gold at the wrong position would change the gradient, and the RL loss's
-gradient against the expected reward with its KL term.
+`tests/test_objective.py` checks the stage-1/2 estimator against the exact gradient for 2 to 9 options and every option
+shift, including the shifts where reading the shifted view's gold at the wrong position would change the gradient, and the
+RL loss's gradient against the expected reward with its KL term. `tests/test_selfchecks.py` runs the RL ablation
+estimators' check and the AlpaSim driver's geometry, camera re-projection and past-frame checks.
+
+## Not in this release
+
+These parts of the paper's pipeline are not part of the code release, and the results they affect:
+- the decoded-reply QA evaluation and the conversion of Qwen-Drive-1.0's weights for our QA readout: Table 2's decoded and
+  Qwen-Drive-1.0 columns, the supplement's Letter and decoded replies;
+- the latency harness: Fig. 1 left, Fig. 6 top and the supplement's Time per plan;
+- Qwen-Drive-1.0's AlpaSim driver: its rows in Table 3 and Fig. 6;
+- the readouts of the text and regression ablation rows (Table 8, One change at a time) and the frozen-feature probe;
+- the head refit of the current-frame model ("extended set" in AlpaSim results by training recipe);
+- the inputs the refit and the RL pool read besides the builders' outputs (the refit rows and score tables, the fold
+  pools, the 5,273 candidates' reward tables, the WOD-E2E split lists), and the rollouts of the rollout rows;
+- the scripts that collect the supplement's rear-collision and plan-distance numbers from the AlpaSim runs;
+- the plotting scripts of the figures.
+
+## License
+
+The code is released under the Apache License 2.0 (`LICENSE`); third-party code and models are listed in `NOTICE`.
+The weights and the QA data list their terms on their Hugging Face pages; each data source keeps its own terms, some of
+them non-commercial (WOD-E2E, DriveLM-nuScenes, NAVSIM / OpenScene, PhysicalAI-AV).
 
 ## Citation
 
 ```bibtex
-@inproceedings{superglance2027,
-  title     = {SuperGlance: Driving at a Glance with a Vision-Language Model},
-  author    = {TBD},
-  year      = {2027}
+@misc{superglance2026,
+  title  = {SuperGlance: Driving at a Glance with a Vision-Language Model},
+  author = {Jieyuan Pei and Xin Yan and Mingwei Xu and Haiyi Zhang and Siyu Zou and Zhangyi Hu and Zhuoxuan Li and
+            Yuguang Yang and Rongjunchen Zhang and Cheng Chi and Hui Xiong and Yan Wang},
+  year   = {2026}
 }
 ```
 
-## License
+## Acknowledgements
 
-Apache License 2.0 (`LICENSE`). Third-party code and models are listed in `NOTICE`.
+SuperGlance builds on Qwen3.5, NAVSIM, nuPlan and OpenScene, AlpaSim and PhysicalAI-AV, the Waymo Open Dataset (WOD-E2E),
+Language2Drive, DriveLM and the question-answering datasets listed on the SuperGlance-QA page. We thank their authors for
+releasing them.

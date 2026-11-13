@@ -25,9 +25,23 @@ Qwen-2.5-1B-RLCD, core/engine_torch.py, Apache License 2.0 (repository metadata)
 
 AlpaSim, Apache License 2.0.
   The closed-loop simulator of the paper. superglance/alpasim/driver.py serves AlpaSim's egodriver gRPC interface
-  (AlpaSim's alpasim_grpc package, imported, not included), and superglance/eval/pai_inputs.py re-projects f-theta
-  frames with the camera model of AlpaSim's rectification.py. AlpaSim itself is not included.
+  (AlpaSim's alpasim_grpc package, imported, not included), superglance/alpasim/collisions.py reads its rollout logs
+  with its alpasim_utils package, and superglance/eval/pai_inputs.py re-projects f-theta frames with the camera model of
+  AlpaSim's rectification.py. AlpaSim itself is not included.
 
 Waymo Open Dataset, rater_feedback_utils.py, Copyright 2025 The Waymo Open Dataset Authors, Apache License 2.0.
   https://github.com/waymo-research/waymo-open-dataset
   superglance/builders/pools/rater_feedback_utils.py is that file, unchanged: the WOD-E2E rater feedback score.
+
+Language2Drive SDK and benchmark scorer.
+  superglance/l2d/adapter.py implements the SDK's model-adapter interface, scripts/l2d_run.sh runs the SDK and
+  scripts/eval_l2d.sh its scorer, and superglance/builders/instructions/ imports its trajectory verifier. The SDK and the
+  scorer are not included.
+
+Qwen-Drive-1.0.
+  scripts/eval_pai_qwen_drive.sh runs its released planning script on our PAI-AV frames, and superglance/eval/qd_pai_scenes.py
+  and qd_pai_score.py import its code to write its scene format and to score its plans. Its code and weights are not included.
+
+PhysicalAI-AV devkit (physical_ai_av).
+  Imported by superglance/builders/shards/pai_inputs.py and superglance/eval/qd_pai_scenes.py to read the dataset; not
+  included.

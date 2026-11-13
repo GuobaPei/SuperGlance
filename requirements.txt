@@ -20,6 +20,14 @@ av
 requests
 huggingface_hub
 grpcio
-# WOD-E2E rows and submissions: waymo-open-dataset (or set WOD_PROTOS to protos generated from its .proto files);
-# the AlpaSim driver: AlpaSim's alpasim_grpc package (installed with AlpaSim);
-# the executor, the NAVSIM rewards and scene export run in NAVSIM's own environment (NAVSIM devkit v1.1 + nuPlan devkit)
+scipy        # PAI-AV one-plan readout (cubic spline)
+shapely      # instruction rows: footprints and lanes
+pyyaml       # scripts/alpasim_services.sh reads AlpaSim's generated configs (the python3 on PATH)
+pytest       # tests/
+# external, installed as their projects describe (README, Installation):
+#   NAVSIM devkit v1.1 + nuPlan devkit: the executor, the NAVSIM rewards, scene export and instruction rows (own environment)
+#   waymo-open-dataset: WOD-E2E rows and submissions (or set WOD_PROTOS to protos generated from its .proto files)
+#   AlpaSim with its alpasim_grpc and alpasim_utils packages: the closed-loop driver and the collision counts
+#   physical_ai_av (PhysicalAI-AV devkit): PAI-AV training rows and Qwen-Drive-1.0's PAI-AV scenes
+#   the Language2Drive SDK and its scorer: scripts/l2d_run.sh, scripts/eval_l2d.sh, the instruction rows' verifier
+#   Qwen-Drive-1.0's repository and environment: scripts/eval_pai_qwen_drive.sh
