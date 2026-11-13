@@ -14,7 +14,7 @@
 #   last     WOD rows at training frames 135-165 -> $OUT/wod_last; $SFT_POOL with its WOD rows replaced, target t1 =
 #            softmax(proxy RFS / 0.5 - (ADE - min ADE) / 1 m) -> $S1_POOL
 #   rl       the RL pool ($RL_POOL, 5,121 reward columns) with the K' candidates' reward columns appended -> $RL_OUT
-# Inputs made by builders that are not in this release (README, "Stage-3 pools"): the shard dirs NAV_SHARD (navtrain, PDMS soft
+# Inputs made by builders that are not in this release (README, "Stage 3: policy pools"): the shard dirs NAV_SHARD (navtrain, PDMS soft
 # targets), DAGGER_SHARD, PAI_SHARDS (the 16 PAI-AV human parts), L2D_SHARD (Language2Drive), OS_SHARD (OpenScene frames outside
 # navtrain); QA_SUBSET (report.json and weights.json of the earlier QA subset), E2E_INPUTS (e2e_inputs.npz), $MF/hist_pai (PAI-AV
 # history tars), RL_POOL and RL_DEV (its dev.jsonl), KP_W (the K' candidates' tables), CHECK (the reward check's inputs).

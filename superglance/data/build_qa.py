@@ -40,8 +40,8 @@ def main():
     for source, (n, why) in short.items():
         print(f"incomplete: {source} misses {n} of {counts[source]['rows']} rows ({why})")
     if short and not a.allow_incomplete:
-        raise SystemExit(f"{len(short)} sources are incomplete: rebuild them (README, 'Held sources') and put the full files "
-                         f"under {a.hf / f'stage{a.stage}' / 'train'}; nothing written")
+        raise SystemExit(f"{len(short)} sources are incomplete: rebuild them (README, 'Stages 1 and 2: the QA dataset') "
+                         f"and put the full files under {a.hf / f'stage{a.stage}' / 'train'}; nothing written")
     rows.sort(key=lambda r: r["row"])
     a.out.mkdir(parents=True, exist_ok=True)
     with (a.out / "train.jsonl").open("w") as f:
