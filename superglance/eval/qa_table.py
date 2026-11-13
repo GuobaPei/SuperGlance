@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Headline numbers of the QA benchmarks from eval_qa output dirs (sat/, external/, 3dsr/, drivelm_test/, text/), with the
-definitions of Table 1: CV-Bench source-weighted (0.5 x (the mean of the two 2D sources + the 3D source)), BLINK's four tasks,
+definitions of Table 2: CV-Bench source-weighted (0.5 x (the mean of the two 2D sources + the 3D source)), BLINK's four tasks,
 3DSRBench official circular, DriveLM test right in every cyclic order (and in the stored order), the text benchmarks' accuracy;
 SAT when present. Prints one column per dir, in percent.
 usage: python -m superglance.eval.qa_table <eval dir> [<eval dir> ...]"""

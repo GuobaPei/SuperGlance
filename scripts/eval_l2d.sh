@@ -6,8 +6,8 @@
 #   control_no_instruction/navsim/{canonical,rewrites}.json  the same scenes, no instruction  -> "no instruction"
 #   argmax_from_same_run/{instructed,control_no_instruction}/{canonical,rewrites}.json   the head's argmax of the same runs
 # Table 7: "SuperGlance" and "SuperGlance, no instruction" are the final model's mean and mean_noinstr; "no instruction rows"
-# is the mean of the supervised model trained without instruction rows. Running the SDK on a model (the step that writes a
-# package) is not part of this release.
+# is the mean of the supervised model trained without instruction rows. scripts/l2d_run.sh runs the SDK on a model and
+# writes its package.
 #   L2D_SCORER=<the benchmark's scoring folder: scorer/score_corrected.py, its sidecars in private/, its packages in site/>
 #   [OUT=runs/l2d] bash scripts/eval_l2d.sh <name>=<package dir> [...]
 set -euo pipefail

@@ -8,8 +8,9 @@
 #   features  superglance.eval.features with that index; K = the candidate set's size
 #   ade       superglance.eval.pai_ade: the head's argmax (top1) and its six most probable candidates (avg6 / min6) beside the
 #             oracle candidate and constant velocity, over all frames and over the T0 frames
-# Table 6's best-of-six cells are min6 over all frames. Its one-plan cells read the top-64 mean (tau 0.2) densified by a cubic
-# spline from the logged velocity, a step whose script is not part of this release; top1 here is the argmax, densified linearly.
+#   one       superglance.eval.pai_readout: the top-64 mean at temperature 0.2 densified by the cubic spline from the logged
+#             velocity ("mean"), beside the argmax densified linearly, to six decimals
+# Table 6: one-plan cells = one's "mean" (3 s / 5 s), best-of-six cells = ade's min6 over all frames.
 #   PAI_ROOT=<PhysicalAI-AV root: clip_index.parquet, camera/, labels/, calibration/>
 #   GOLD=<1005_7cam_gold_eval_metadb_public.parquet, or - for every clip of SPLIT> BASE=<stage-2 merged base> ADAPTER=<adapter>
 #   CANDS=<candidate set .npy> [SPLIT=test] [OUT=runs/pai] [NAME=superglance] [HIST=1] [GPU=0] [PROCS=16] bash scripts/eval_pai.sh
@@ -34,3 +35,4 @@ K=$("$PY" -c 'import numpy, sys; print(len(numpy.load(sys.argv[1], mmap_mode="r"
   ${idx[@]+"${idx[@]}"}
 echo "$ADAPTER" > "$X/adapter.txt"   # pai_ade reads the Policy Head for the six most probable candidates from here
 "$PY" -m superglance.eval.pai_ade "$R" "$CANDS" "$NAME=$X" | tee "$OUT/ade_${NAME}_$SPLIT.txt"
+"$PY" -m superglance.eval.pai_readout "$R" "$X=$CANDS" | tee "$OUT/one_${NAME}_$SPLIT.txt"

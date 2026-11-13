@@ -2,23 +2,26 @@
 # AlpaSim closed loop on the 916 scenarios of PAI-AV-NuRec 26.01 (AlpaSim's public_2601 suite), set up as the paper's runs:
 # four drivers (superglance.alpasim.driver, one GPU each, ports BP+10 / +30 / +50 / +70) with --rectify-f0 --cmd-rule ego
 # --hist --exec navsim; AlpaSim's wizard with +e2e_challenge=dev, topology 4gpu_ext4, runtime.nr_workers=4 and the planner
-# delay; video off; then the summaries: superglance.alpasim.clean, .table, .km and, against a reference run, .pair.
+# delay; video off; then the summaries: superglance.alpasim.clean, .table, .km, .collisions (at-fault collisions by kind,
+# in AlpaSim's environment) and, against a reference run, .pair.
 #   BASE=<stage-2 merged base> ADAPTER=<adapter> CANDS=<candidate set .npy> ALPASIM=<AlpaSim checkout>
 #   DATA=<AlpaSim data folder with nre-artifacts/> NAVSIM_PYTHON=<python of the NAVSIM environment>
-#   ALPASIM_RUN=<command that runs a generated config dir> [NAVSIM_DEVKIT=<navsim checkout>] [DELAY_US=0] [EXEC=navsim]
+#   NRE_RUN=<runs a command inside AlpaSim's NRE renderer image on one GPU: scripts/alpasim_services.sh>
+#   [ALPASIM_RUN="setsid -w bash scripts/alpasim_services.sh"] [NAVSIM_DEVKIT=<navsim checkout>] [DELAY_US=0] [EXEC=navsim]
 #   [HIST=1] [OUT=runs/alpasim] [BP=27700] [DRIVER_GPUS="0 1 2 3"] [SIM_GPUS="4 5 6 7"] [REF=<results-summary.clean.json>]
 #   bash scripts/eval_alpasim.sh
 # DELAY_US is AlpaSim's runtime.simulation_config.planner_delay_us (0: none). EXEC=plan hands AlpaSim the plan's 8 poses
 # instead of the PDM simulator's 40; HIST=0 for a model trained without past frames.
 # ALPASIM_RUN is called with the run dir as its argument and GPUS (= SIM_GPUS), NRE_D (= DATA/nre-artifacts) and A (= ALPASIM)
 # in the environment; it starts the generated config's services (renderer, physics, controller, runtime) and returns when the
-# rollouts are done. The paper's own command for this step is not part of this release.
+# rollouts are done. The default is the paper's runner, scripts/alpasim_services.sh.
 # All 916 scenarios run as one run. The paper's runs split them into four quarters and merged the summaries; with a fixed
 # configuration AlpaSim gives the same metrics per scenario either way.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 : "${BASE:?stage-2 merged base}" "${ADAPTER:?adapter}" "${CANDS:?candidate set}" "${ALPASIM:?AlpaSim checkout}"
-: "${DATA:?AlpaSim data folder}" "${NAVSIM_PYTHON:?NAVSIM python}" "${ALPASIM_RUN:?command that runs a config dir}"
+: "${DATA:?AlpaSim data folder}" "${NAVSIM_PYTHON:?NAVSIM python}"
+ALPASIM_RUN=${ALPASIM_RUN:-setsid -w bash scripts/alpasim_services.sh}
 OUT=${OUT:-runs/alpasim}; BP=${BP:-27700}; DELAY_US=${DELAY_US:-0}; EXEC=${EXEC:-navsim}; HIST=${HIST:-1}
 DG=(${DRIVER_GPUS:-0 1 2 3}); SG=${SIM_GPUS:-4 5 6 7}; PY=${PY:-python}; APY=${ALPASIM_PY:-$ALPASIM/.venv/bin/python}
 FR=${FRAMES:-/dev/shm/superglance_driver}
@@ -50,7 +53,7 @@ echo "drivers up: $drivers"
 
 xw=(runtime.nr_workers=4)
 [ "$DELAY_US" != 0 ] && xw+=(runtime.simulation_config.planner_delay_us=$DELAY_US)
-if [ "$(nvidia-smi -L | wc -l)" -lt 8 ]; then   # the wizard's GPU lists, as the paper's runs set them on boxes with fewer GPUs
+if [ "$(nvidia-smi -L | wc -l)" -lt 8 ]; then   # the wizard's GPU lists, as the paper's runs set them on machines with fewer GPUs
   xw+=("services.driver.gpus=[$(IFS=,; echo "${DG[*]}")]" "services.renderer.gpus=[${SG// /,}]" "services.physics.gpus=[${SG// /,}]")
 fi
 ( cd "$ALPASIM" && "$APY" -m alpasim_wizard +e2e_challenge=dev +nurec_scenes=curated_val scenes.test_suite_id=null "scenes.scene_ids=[$ids]" \
@@ -69,4 +72,5 @@ for k in 0 1 2 3; do p=$((BP + 10 + 20 * k)); cp "${FR}_$p/decisions.jsonl" "$OU
 S=$R/aggregate/results-summary.clean.json
 "$PY" -m superglance.alpasim.table "$S"
 "$PY" -m superglance.alpasim.km "$S" ${REF:-}
+"$APY" -m superglance.alpasim.collisions "$S" "$R/rollouts/{c}/*/rollout.asl" "$OUT/collisions.jsonl"
 [ -z "${REF:-}" ] || "$PY" -m superglance.alpasim.pair "$REF" "$S"
