@@ -10,7 +10,7 @@ import numpy as np
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
-from superglance.model.prompt import build_choice_prompt, candidate_token_ids, native_candidate_logits, render_chat
+from superglance.model.prompt import build_choice_prompt, candidate_token_ids, render_chat  # noqa: F401 (candidate_token_ids: imported from here)
 from superglance.model import history as mf_hist
 
 

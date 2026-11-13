@@ -15,7 +15,6 @@ import shutil
 import time
 from pathlib import Path
 
-import torch
 from safetensors import safe_open
 from safetensors.torch import load_file, save_file
 

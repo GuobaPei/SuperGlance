@@ -28,7 +28,7 @@ from transformers import (
     set_seed,
 )
 
-from superglance.data.policy import candidate_token_ids, native_candidate_logits, readout
+from superglance.data.policy import candidate_token_ids, readout
 from superglance.data.policy_pairs import PermutationCollator, PermutationDataset
 from superglance.objectives.permutation import aligned_probabilities, candidate_kl, permutation_loss
 from superglance.data.mixture import MixtureSampler
@@ -356,7 +356,7 @@ def main():
     processor = AutoProcessor.from_pretrained(
         args.model, min_pixels=cfg["min_pixels"], max_pixels=cfg["max_pixels"],
     )
-    # q35 port: the Auto class resolves Qwen3_5ForConditionalGeneration (transformers >= 5; dtype= replaces torch_dtype=).
+    # Qwen3.5: the Auto class resolves Qwen3_5ForConditionalGeneration (transformers >= 5; dtype= replaces torch_dtype=).
     model = AutoModelForImageTextToText.from_pretrained(
         args.model, dtype=torch.bfloat16 if cfg.get("bf16", True) else torch.float32,
         attn_implementation=cfg["attention"],

@@ -81,13 +81,13 @@ def command_from_route(waypoints, speed=0.0, horizon_s=4.0, lead_m=10.0, turn_de
     human's heading 4 s later: left median +36 deg, right -33 deg; straight 90% within +-6.5 deg, lane changes included),
     so the route's heading where the ego will be in about horizon_s (arc length speed * horizon_s + lead_m, 15-60 m)
     decides: > turn_deg left, < -turn_deg right, else straight. (AlpaSim's own rule, |y| > 2 m at the first waypoint 5 m
-    ahead, called a lane offset at 15 m/s a right turn on 10-07 and drove the car off the road.)
-    from_ego (10-12, --cmd-rule ego): the arc length runs from the ego, through the straight gap to the route's start, then
+    ahead, calls a lane offset at 15 m/s a right turn, which can drive the car off the road.)
+    from_ego (--cmd-rule ego): the arc length runs from the ego, through the straight gap to the route's start, then
     along the route. With the default the gap counts as driven, so a car slower than about 8 m/s reads the heading at the
-    route's start, wherever it will be in 4 s. Offline on the 1,475 nuPlan rollouts of 10-11: agreement with the human's
+    route's start, wherever it will be in 4 s. Offline on 1,475 nuPlan rollouts: agreement with the human's
     4 s heading change 78.0% -> 85.3% of drive calls; 8 of the 9 failed rollouts whose command changes get the human's command."""
     pts = np.asarray(waypoints, np.float64).reshape(-1, 2)
-    pts = pts[np.isfinite(pts).all(1)]   # 10-11: the nuPlan track pads the route with NaN; argmin hit a NaN, so every call was "straight"
+    pts = pts[np.isfinite(pts).all(1)]   # the nuPlan track pads the route with NaN, which would make every call "straight"
     if len(pts) < (1 if from_ego else 2):
         return [0, 0, 0, 1]
     d = np.hypot(pts[:, 0], pts[:, 1])
@@ -386,7 +386,7 @@ def serve(args):
             vel, acc, w = s.dyn[max(s.dyn)] if s.dyn else ((0.0, 0.0), (0.0, 0.0), 0.0)
             vfd, afd = motion_from_poses(times, P, yaws, t_last)
             src = "state"
-            if np.hypot(*vel) < 0.2 and np.hypot(*vfd) > 1.0:   # 10-07: zero dynamic states during the force-GT replay
+            if np.hypot(*vel) < 0.2 and np.hypot(*vfd) > 1.0:   # zero dynamic states during the force-GT replay
                 vel, acc, src = vfd, afd, "poses"
                 w = float((np.unwrap(yaws)[-1] - np.unwrap(yaws)[-2]) / ((times[-1] - times[-2]) / 1e6)) if len(times) > 1 else 0.0
             img = os.path.join(args.frames, f"{req.session_uuid}.jpg")
@@ -430,7 +430,7 @@ def serve(args):
             poses, dt_us = plan, 500_000
             ev, ea, ew = vel, acc, w   # the executor's start state
             if executor is not None:   # the real state, not the prompt's
-                k = int(round((req.time_now_us - s.prev_t) / 1e5))   # 11-09 stitching: the last executed plan's steering at now
+                k = int(round((req.time_now_us - s.prev_t) / 1e5))   # stitching: the last executed plan's steering at now
                 st = s.prev_states[k] if s.prev_states is not None and 1 <= k <= 5 else None
                 executor.stdin.write(json.dumps({"plan": np.asarray(plan).tolist(), "v": [float(x) for x in ev], "a": [float(x) for x in ea],
                                                  "yaw_rate": float(ew), "steer": st}) + "\n")

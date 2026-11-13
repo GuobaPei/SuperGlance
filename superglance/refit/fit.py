@@ -16,7 +16,7 @@ Refit data directory (--data): data/cands_k5273_v2.npy, targets/, pilot/, tables
 Features (--feat): nav, pai, navtest, paival, pai700 (superglance.refit.rows makes their rows).
 usage: python -m superglance.refit.fit fit  --base A --data D --feat F --heldout T --out DIR [--lams 1e-1,1e-2,1e-3] [--device cpu]
        python -m superglance.refit.fit eval --base A --data D --feat F --heldout T --adapter A' --full --out J"""
-import argparse, glob, json, os, sys, time, zlib
+import argparse, glob, json, os, time
 import numpy as np
 
 KW, KB = "base_model.model.choice_head.weight", "base_model.model.choice_head.bias"; K = 5121

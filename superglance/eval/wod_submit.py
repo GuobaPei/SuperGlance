@@ -15,7 +15,7 @@ usage: python -m superglance.eval.wod_submit build <name> <features dir> <cands.
               --public-model-names [M ...] --num-model-parameters 9B
        python -m superglance.eval.wod_submit check <pkg dir> <list.txt> [<rows dir>]
 Protos: the waymo-open-dataset package, or WOD_PROTOS = a directory with the modules generated from its .proto files."""
-import argparse, glob, io, json, os, re, sys, tarfile
+import argparse, glob, json, os, re, sys, tarfile
 
 sys.path[:0] = [os.environ["WOD_PROTOS"]] if "WOD_PROTOS" in os.environ else []
 from waymo_open_dataset.protos import end_to_end_driving_submission_pb2 as sub   # noqa: E402

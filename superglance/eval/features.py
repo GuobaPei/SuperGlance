@@ -5,7 +5,7 @@ prompt its past frames, as the training rows have them; a prompt without them re
 Shard r of n writes <out>/h_<r>.npy (float16 [N, d]), tok_<r>.txt, code_<r>.npy.
 usage: python -m superglance.eval.features --inputs a.jsonl[,b.jsonl] --tokens t.txt --model M --adapter A --out DIR
        --k K [--index past.jsonl] [--rank r --world n] [--bs 8]"""
-import argparse, json, os, sys, time
+import argparse, json, os, time
 import numpy as np
 
 

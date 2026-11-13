@@ -230,7 +230,7 @@ def main():
 
     rows, selection = read_rows(args.manifest, args.limit)
     processor = AutoProcessor.from_pretrained(args.model, min_pixels=args.min_pixels, max_pixels=args.max_pixels)
-    # q35 port: Auto class resolves Qwen3_5ForConditionalGeneration.
+    # Qwen3.5: Auto class resolves Qwen3_5ForConditionalGeneration.
     model = AutoModelForImageTextToText.from_pretrained(
         args.model, dtype=getattr(torch, args.dtype), attn_implementation="sdpa")
     if args.adapter:

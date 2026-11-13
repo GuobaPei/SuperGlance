@@ -11,7 +11,7 @@ Every current and past frame must exist (exit 1 otherwise). Out: <out>/<set>_inp
 exports; the extraction keeps only the listed tokens), <set>_tokens.txt, <set>_index.jsonl, report.json.
 usage: python -m superglance.refit.rows <out> --nav-inputs N --navtest-inputs T --hist-nav I [--hist-nav-fill F] --hist H
        --hist-test HT --fit-tokens FT --heldout HO --pai-subset P --pai-openloop O --hist-pai-ol HP"""
-import argparse, json, os, sys, zlib
+import argparse, json, os, zlib
 from concurrent.futures import ThreadPoolExecutor
 
 ap = argparse.ArgumentParser(); A = ap.add_argument

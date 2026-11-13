@@ -4,13 +4,13 @@
    permute_row (identity and a cyclic shift s), for 2 to 9 options and every shift. The paired-draw estimate of the
    gradient must match the exact gradient of the expected reward R = 2 p_y p'_y' - sum p^2 sum p'^2 (relative error
    below 5 %), with random logits and with a model that favours the gold answer. For the latter it must also be far
-   from the gradient of the same reward with the shifted view's gold at y + s instead of y - s, which is what the
-   estimator rewarded before the fix whenever 2s != 0 (mod k).
+   from the gradient of the same reward with the shifted view's gold at y + s instead of y - s, a misreading of the
+   shifted view that changes the gradient whenever 2s != 0 (mod k).
 2. The soft-target branch of joint_brier_pg (a target over answer contents) against its exact gradient.
 3. The KL term and the stage-3 RL loss: exact_rl_loss, reached through permutation_loss as the RL config reaches it,
    has the gradient of -(sum_k p_k r_k - beta KL(p || p_ref)), averaged over rows.
 
-  python tests/test_objective.py
+  python -m pytest -q tests      (or: python tests/test_objective.py)
 """
 import sys
 from pathlib import Path
@@ -79,7 +79,7 @@ def check_qa_pairs(confident):
         z, gold, counts, canon, consistency_weight=0.0, samples=DRAWS, pair_reward="joint", view_target=onehot,
         soft_rows=zeros, soft_objective="brier", view_reward=torch.zeros_like(onehot), reward_rows=zeros)[0], logits)
     right = exact_grad(logits, counts, lambda i, p0, p1: 2 * p0[gold[i]] * p1[gold[i + 1]] - (p0 ** 2).sum() * (p1 ** 2).sum())
-    # the shifted view's gold read at position y + s (content y + 2s) instead of y - s: the target before the fix
+    # the shifted view's gold read at position y + s (content y + 2s) instead of y - s: the misread target
     wrong_pos = {2 * j: (g + s) % k for j, (k, s, g) in enumerate(cases)}
     wrong = exact_grad(logits, counts, lambda i, p0, p1: 2 * p0[gold[i]] * p1[wrong_pos[i]] - (p0 ** 2).sum() * (p1 ** 2).sum())
     worst, closest_wrong = 0.0, float("inf")
@@ -145,9 +145,21 @@ def check_kl_and_rl():
     print("KL term and exact RL loss: gradient = -(p (r - E_p r) - beta grad KL) / rows")
 
 
-if __name__ == "__main__":
+def test_qa_pairs():
     check_qa_pairs(confident=False)
     check_qa_pairs(confident=True)
+
+
+def test_soft_target():
     check_soft_target()
+
+
+def test_kl_and_rl():
     check_kl_and_rl()
+
+
+if __name__ == "__main__":
+    test_qa_pairs()
+    test_soft_target()
+    test_kl_and_rl()
     print("OBJECTIVE_OK")

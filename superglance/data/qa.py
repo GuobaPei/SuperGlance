@@ -8,7 +8,7 @@ import sqlite3
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
-from superglance.model.prompt import build_choice_prompt, candidate_token_ids, native_candidate_logits, render_chat
+from superglance.model.prompt import build_choice_prompt, candidate_token_ids, native_candidate_logits, render_chat  # noqa: F401 (re-exported)
 
 
 @lru_cache(maxsize=4)

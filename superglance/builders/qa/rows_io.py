@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 """Row-file reading and writing of the SAT-derived seed manifests (prepare_perspective_pool.py)."""
-import argparse
-from collections import Counter, defaultdict
 import json
-from pathlib import Path
-import random
 
 
 def read_rows(path):

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Download the SAT-v2 static pilot and official held-out parquet files."""
 import argparse
-import os
 from pathlib import Path
 
 from huggingface_hub import snapshot_download

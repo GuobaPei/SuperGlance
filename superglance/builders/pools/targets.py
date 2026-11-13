@@ -1,6 +1,5 @@
 """Imitation soft targets: softmax(-ADE / tau) over the K candidates, ADE = mean distance over the 8 poses at 0.5-4 s
 (tau 1 m for navtrain / OpenScene and WOD rows, 0.5 m for PAI-AV rows); float32 rows computed in float64."""
-import json, os, shutil, sys
 import numpy as np
 
 

@@ -148,7 +148,7 @@ class OptionReadout:
         processor = AutoProcessor.from_pretrained(
             checkpoint, min_pixels=65536, max_pixels=max_pixels
         )
-        # q35 port: Auto class resolves Qwen3_5ForConditionalGeneration (transformers >= 5).
+        # Qwen3.5: Auto class resolves Qwen3_5ForConditionalGeneration (transformers >= 5).
         model = AutoModelForImageTextToText.from_pretrained(
             checkpoint, dtype=torch.bfloat16, device_map=device_map,
             attn_implementation="sdpa"

@@ -6,7 +6,7 @@ evaluation read. Resumable: existing cache files are kept, never regenerated.
 env: OPENSCENE_DATA_ROOT, NUPLAN_MAPS_ROOT, NAVSIM_DEVKIT_ROOT (the navsim package dir), D (output root; inputs/ and status/
 inside), HELDOUT_TOKENS (navtrain: the held-out token list, one per line; those scenes get subset "heldout", the rest "fit").
 usage (navsim env): python -m superglance.builders.pools.navsim_export --split navtrain|navtest [--nproc 40]"""
-import os, re, sys, time, json, pickle, argparse, warnings
+import os, re, time, json, pickle, argparse, warnings
 import numpy as np
 from pathlib import Path
 from multiprocessing import Pool
@@ -98,7 +98,7 @@ def work(task):
                        cache_bytes=os.path.getsize(cf) if os.path.exists(cf) else 0,
                        map=scene.scene_metadata.map_name, subset=subset.get(tk, SPLIT), timestamp_us=int(sd[3]["timestamp"]),
                        cams=cams, fut=fut, hist=hist, vel=vel, acc=acc, cmd=cmd)
-        except Exception as ex:
+        except Exception:
             import traceback
             rec.update(status="error", err=traceback.format_exc()[-600:])
         out.append(rec)
@@ -141,7 +141,7 @@ def main():
     mapped = set(t for v in per_log.values() for t in v)
     unmapped = sorted(tokset - mapped)
     print(f"mapped {len(mapped)} tokens to {len(per_log)} logs; unmapped {len(unmapped)} ({time.time()-t0:.0f}s)", flush=True)
-    tasks, n = [], 0
+    tasks = []
     for lg in sorted(per_log):
         tl = sorted(set(per_log[lg]))
         for s in range(0, len(tl), args.chunk):

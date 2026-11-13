@@ -113,7 +113,7 @@ def main():
     args = parser.parse_args()
     base_path, adapter_path = checkpoint_paths(args.model, args.adapter)
     processor = AutoProcessor.from_pretrained(base_path, min_pixels=65536, max_pixels=args.max_pixels)
-    # q35 port: Auto class resolves Qwen3_5ForConditionalGeneration (and Qwen3VL for the env check).
+    # Qwen3.5: Auto class resolves Qwen3_5ForConditionalGeneration (and Qwen3VL for the env check).
     model = AutoModelForImageTextToText.from_pretrained(base_path, dtype=torch.bfloat16, attn_implementation="sdpa")
     if adapter_path:
         from peft import PeftModel
