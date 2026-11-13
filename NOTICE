@@ -1,0 +1,28 @@
+SuperGlance
+Copyright 2026 The SuperGlance Authors
+
+This product is released under the Apache License, Version 2.0 (see LICENSE).
+It uses or adapts software and models developed by third parties:
+
+NAVSIM devkit v1.1, Apache License 2.0.
+  https://github.com/autonomousvision/navsim
+  superglance/executor/pdm.py scores candidate trajectories with NAVSIM's PDM simulator and PDM scorer and repeats
+  the ego-progress normalization of navsim/evaluate/pdm_score.py; superglance/executor/sidecar.py and stitched.py run
+  the PDM simulator. NAVSIM itself is imported, not included.
+
+nuPlan-devkit, Copyright 2021 Motional, Apache License 2.0.
+  https://github.com/motional/nuplan-devkit
+  Imported by the executor (ego state and vehicle parameters); not included.
+
+Qwen3.5-9B, Apache License 2.0.
+  https://huggingface.co/Qwen/Qwen3.5-9B
+  The base vision-language model. Its weights are not included; the trainers load it through transformers.
+
+Qwen-2.5-1B-RLCD, core/engine_torch.py, Apache License 2.0 (repository metadata).
+  https://huggingface.co/harshatheg/Qwen-2.5-1B-RLCD
+  The option-letter readout of superglance/model/prompt.py (one sequence per question with all its options, the
+  candidate logits at the answer position) follows it.
+
+AlpaSim, Apache License 2.0.
+  The closed-loop simulator of the paper. The executor's JSON interface serves its egodriver service through the
+  AlpaSim driver (to be added); AlpaSim itself is not included.

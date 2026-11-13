@@ -1,0 +1,12 @@
+# training and inference (the versions of the paper's runs)
+torch==2.10.*
+transformers==5.17.*
+peft==0.21.*
+deepspeed==0.18.1
+flash-linear-attention==0.5.2
+triton==3.7.1
+accelerate
+safetensors
+numpy
+pillow
+# the executor and the NAVSIM rewards run in NAVSIM's own environment (NAVSIM devkit v1.1 + nuPlan devkit)
