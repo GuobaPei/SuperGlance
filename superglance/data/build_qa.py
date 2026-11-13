@@ -5,15 +5,14 @@
 
 train.jsonl = the stage's source files concatenated and sorted by `row`, which with every source present is the
 paper's training file row for row (its image paths point into <out>/images/). The images come from each source's public
-release: run build/build_images.py <out> afterwards, as the dataset's build/README.md describes. dev.jsonl is read only
-by the evaluations during training (checkpoint selection; the paper's runs selected their last step, and evaluation does
-not change the training draws), so a fixed sample of training rows stands in for the unreleased development split.
+release: run build/build_images.py <out> afterwards, as the dataset's build/README.md describes. The development split
+is not released: without dev.jsonl the trainer runs no evaluation and keeps the last step, the checkpoint both of the
+paper's QA runs selected.
 
-  python -m superglance.data.build_qa --hf <dataset snapshot> --stage 1 --out <dir> [--dev-rows 1000]
+  python -m superglance.data.build_qa --hf <dataset snapshot> --stage 1 --out <dir>
 """
 import argparse
 import json
-import random
 import shutil
 from pathlib import Path
 
@@ -23,7 +22,6 @@ def main():
     ap.add_argument("--hf", type=Path, required=True, help="local snapshot of the QA dataset")
     ap.add_argument("--stage", type=int, choices=(1, 2), required=True)
     ap.add_argument("--out", type=Path, required=True)
-    ap.add_argument("--dev-rows", type=int, default=1000)
     a = ap.parse_args()
     counts = json.loads((a.hf / "counts.json").read_text())[f"stage{a.stage}"]
     rows = []
@@ -40,14 +38,11 @@ def main():
     a.out.mkdir(parents=True, exist_ok=True)
     with (a.out / "train.jsonl").open("w") as f:
         f.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
-    dev = random.Random(a.stage).sample(rows, min(a.dev_rows, len(rows)))
-    with (a.out / "dev.jsonl").open("w") as f:
-        f.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in dev)
     blank = a.hf / "images" / "text" / "blank.png"
     if blank.exists():
         (a.out / "images" / "text").mkdir(parents=True, exist_ok=True)
         shutil.copy2(blank, a.out / "images" / "text" / "blank.png")
-    print(f"stage {a.stage}: {len(rows)} training rows from {len(counts)} sources, {len(dev)} dev rows -> {a.out}\n"
+    print(f"stage {a.stage}: {len(rows)} training rows from {len(counts)} sources -> {a.out}\n"
           f"next: python {a.hf / 'build' / 'build_images.py'} {a.out}")
 
 

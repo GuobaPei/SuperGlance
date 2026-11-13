@@ -39,9 +39,12 @@ Q35_LORA_TARGETS = (r"model\.language_model\.layers\.\d+\.(self_attn\.(q_proj|k_
 
 
 class FinalCheckpoint(TrainerCallback):
+    def __init__(self, evaluate=True):
+        self.evaluate = evaluate   # False without dev.jsonl: the last step is saved, not evaluated
+
     def on_step_end(self, args, state, control, **kwargs):
         if state.global_step == state.max_steps:
-            control.should_evaluate = True
+            control.should_evaluate = self.evaluate
             control.should_save = True
 
 
@@ -253,7 +256,7 @@ class PermutationTrainer(Trainer):
             np.random.set_state(numpy_state)
 
 
-def training_arguments(cfg, output, max_steps=-1):
+def training_arguments(cfg, output, max_steps=-1, evaluate=True):
     ds = cfg.get("deepspeed", "zero2.json")
     if ds:
         ds = str(Path(__file__).resolve().parents[2] / "configs" / ds)
@@ -268,10 +271,10 @@ def training_arguments(cfg, output, max_steps=-1):
         gradient_checkpointing=cfg.get("gradient_checkpointing", True),
         gradient_checkpointing_kwargs={"use_reentrant": False},
         deepspeed=ds,
-        eval_strategy="steps", eval_steps=cfg["eval_steps"],
+        eval_strategy="steps" if evaluate else "no", eval_steps=cfg["eval_steps"],
         save_strategy="steps", save_steps=cfg["save_steps"],
         save_total_limit=cfg["save_total_limit"],
-        load_best_model_at_end=True,
+        load_best_model_at_end=evaluate,   # without dev.jsonl the last step is kept
         metric_for_best_model=cfg.get("selection_metric", "both_correct"), greater_is_better=True,
         logging_steps=cfg["logging_steps"], logging_first_step=True,
         remove_unused_columns=False, label_names=["labels"],
@@ -318,12 +321,15 @@ def main():
     ))
     lora_report = trainable_parameter_report(model)
     train = PermutationDataset(args.data / "train.jsonl", pair_mode=cfg["pair_mode"], seed=cfg["seed"], pair_rounds=args.pair_rounds)
-    dev = PermutationDataset(args.data / "dev.jsonl", pair_mode="swap", seed=cfg["seed"] + 100)
-    max_options = max(len(row["answers"]) for dataset in (train, dev) for row in dataset.rows)
+    # dev.jsonl is optional: it only selects the best checkpoint, and the paper's two QA runs kept their last step.
+    # Without it there is no evaluation and the last step is kept.
+    dev = PermutationDataset(args.data / "dev.jsonl", pair_mode="swap", seed=cfg["seed"] + 100) \
+        if (args.data / "dev.jsonl").exists() else None
+    max_options = max(len(row["answers"]) for dataset in (train, dev) if dataset is not None for row in dataset.rows)
     answer_boundary = validate_answer_boundary(processor, max_options)
     token_ids = candidate_token_ids(processor, max_options)
     trainer = PermutationTrainer(
-        model=model, args=training_arguments(cfg, args.output, args.max_steps),
+        model=model, args=training_arguments(cfg, args.output, args.max_steps, evaluate=dev is not None),
         train_dataset=train, eval_dataset=dev,
         data_collator=PermutationCollator(processor, max_options),
         token_ids=token_ids, samples=cfg["reward_samples"],
@@ -334,8 +340,8 @@ def main():
         soft_objective=cfg.get("soft_objective", "brier"),
         fp32_readout=cfg.get("fp32_readout", False),
         kl_skip_soft_rows=cfg.get("kl_skip_soft_rows", False),
-        compute_metrics=source_metrics(dev.rows),
-        callbacks=[FinalCheckpoint()] + ([EvalAfterFirstStep()] if cfg.get("eval_after_first_step") else []),
+        compute_metrics=source_metrics(dev.rows) if dev is not None else None,
+        callbacks=[FinalCheckpoint(evaluate=dev is not None)] + ([EvalAfterFirstStep()] if cfg.get("eval_after_first_step") else []),
     )
     if trainer.is_world_process_zero():
         args.output.mkdir(parents=True, exist_ok=True)
@@ -344,12 +350,12 @@ def main():
         run = dict(
             cfg, model=args.model, data=str(args.data), max_steps=args.max_steps,
             train_qa=len(train.rows), train_pair_items=len(train), pair_rounds=args.pair_rounds,
-            dev_qa=len(dev), max_options=max_options,
+            dev_qa=len(dev) if dev is not None else 0, max_options=max_options,
             train_views=2 * len(train), global_qa_batch=global_qa,
             global_view_batch=2 * global_qa, eval_pair_mode="swap",
             objective=("joint_brier_pg (QA correct only if both orders are)" if cfg.get("pair_reward") == "joint"
                        else "paired_brier_pg") + " + consistency_weight * content_js + kl_weight * KL(p || p_base)",
-            train_pool=train.pool_report, dev_pool=dev.pool_report,
+            train_pool=train.pool_report, dev_pool=dev.pool_report if dev is not None else None,
             lora=lora_report, answer_boundary_token_ids=answer_boundary,
         )
         print(json.dumps({"lora": lora_report, "answer_boundary_token_ids": answer_boundary}), flush=True)
@@ -362,10 +368,11 @@ def main():
     result = trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
     trainer.save_metrics("train", result.metrics)
     trainer.save_state()
-    # Trainer has loaded its best dev checkpoint, if one was saved.
+    # Trainer has loaded its best dev checkpoint, if one was saved (without dev.jsonl: the last step).
     trainer.save_model(str(args.output / "final"))
-    metrics = trainer.evaluate(metric_key_prefix="dev")
-    trainer.save_metrics("dev", metrics)
+    if dev is not None:
+        metrics = trainer.evaluate(metric_key_prefix="dev")
+        trainer.save_metrics("dev", metrics)
     if trainer.is_world_process_zero():
         processor.save_pretrained(args.output / "final")
         (args.output / "selection.json").write_text(json.dumps({

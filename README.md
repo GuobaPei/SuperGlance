@@ -19,6 +19,8 @@ rank-32 LoRA adapters, trained in three stages:
 | 3 RL | NAVSIM, PAI-AV, WOD-E2E rows | exact expected reward over all 5,273 candidates + 0.3 KL to the supervised policy | last phase, head refit to 5,273 | 2,000 x 64 |
 
 Each stage's adapter is merged before the next stage (stages 1 and 2); stage 3 trains one adapter and the Policy Head.
+All runs use 8 GPUs; stages 1 and 2 take micro-batches of 4 with 2 accumulation steps. If memory is tight, set
+`gradient_checkpointing` to true in the config: it trades compute for memory, the math is the same.
 
 ## Repository layout
 
@@ -75,13 +77,13 @@ also carry `yes_index`; the remaining fields (ids, the source's own options and 
 build) are kept and ignored by the trainer. Build a trainer directory per stage:
 
 ```bash
-python -m superglance.data.build_qa --hf <dataset snapshot> --stage 1 --out data/stage1   # train.jsonl, dev.jsonl
+python -m superglance.data.build_qa --hf <dataset snapshot> --stage 1 --out data/stage1   # train.jsonl
 python <dataset snapshot>/build/build_images.py data/stage1                              # data/stage1/images/
 ```
 
-`train.jsonl` is the paper's training file row for row. The development split is not released: `build_qa.py` writes a
-fixed sample of training rows as `dev.jsonl`, which the trainer only evaluates (the paper's runs used their last step).
-Stage 2's mixture includes stage-1 questions, which its source files repeat.
+`train.jsonl` is the paper's training file row for row. The development split is not released. Without `dev.jsonl` the
+trainer runs no evaluation and keeps the last step, which is the checkpoint both of the paper's QA runs selected on
+their development split. Stage 2's mixture includes stage-1 questions, which its source files repeat.
 
 ### Stage 3: policy pools
 
