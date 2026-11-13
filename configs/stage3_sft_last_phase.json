@@ -1,7 +1,7 @@
 {
   "attention": "sdpa",
   "bf16": true,
-  "choice256": true,
+  "policy_head": true,
   "choice_k": 5121,
   "consistency_weight": 0.0,
   "deepspeed": "",

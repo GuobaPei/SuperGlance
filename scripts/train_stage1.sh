@@ -3,15 +3,19 @@
 # base model; then the adapter is merged into the base (CPU).
 #   BASE=<Qwen3.5-9B> DATA=<stage-1 questions: train.jsonl, dev.jsonl> [OUT=runs/stage1] bash scripts/train_stage1.sh
 # 8 GPUs x micro-batch 4 x accumulation 2 = 64 questions (128 views) per step, 7,813 steps, DeepSpeed ZeRO-2.
-# Extra arguments go to the trainer (e.g. --resume-from-checkpoint). If memory is tight, set gradient_checkpointing to
-# true in the config: it trades compute for memory, the math is the same.
+# BASE is a local directory with the full snapshot (the merge reads its model.safetensors.index.json).
+# Stage 1 needs gradient checkpointing on 80 GB GPUs; the config has it on. The paper's run had it off for steps 1-4,000,
+# stopped out of memory near step 4,056 and continued from checkpoint-4000 with it on: the same updates, more compute.
+# A stopped run continues with: bash scripts/train_stage1.sh --resume-from-checkpoint (the last checkpoint, or give a path).
 # Without dev.jsonl (the released data has none) the trainer runs no evaluation and final/ is the last step, the
 # checkpoint the paper's run selected.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 : "${BASE:?Qwen3.5-9B directory}" "${DATA:?stage-1 question directory}"
 OUT=${OUT:-runs/stage1}
+[ -s "$BASE/model.safetensors.index.json" ] || { echo "BASE must be a local full snapshot of Qwen3.5-9B" >&2; exit 1; }
 export PYTORCH_CUDA_ALLOC_CONF=${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True} TOKENIZERS_PARALLELISM=false OMP_NUM_THREADS=4
+export FLA_TILELANG=0   # flash-linear-attention's Triton kernels, as the paper's stage-1 and stage-2 runs (no effect without TileLang)
 torchrun --standalone --nproc_per_node=8 -m superglance.train.qa --config configs/stage1_general_qa.json \
   --model "$BASE" --data "$DATA" --output "$OUT/train" --pair-mode swap --pair-rounds 1 "$@"
 CUDA_VISIBLE_DEVICES="" python -m superglance.model.merge --model "$BASE" --adapter "$OUT/train/final" --output "$OUT/merged"

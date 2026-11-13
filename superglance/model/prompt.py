@@ -82,7 +82,7 @@ def native_candidate_logits(model, inputs, token_ids, fp32=False):
     position. The model still executes its native processor/M-RoPE/DeepStack.
     fp32=True recomputes the candidate logits from the final hidden state in
     float32: the bf16 LM head rounds logits near 25 to steps of 0.125, which
-    ties the top two of 16 options in 12-16% of stage-3 rows.
+    can tie the top two options.
     """
     if not fp32:
         outputs = model(**inputs, use_cache=False, logits_to_keep=1)
@@ -131,7 +131,7 @@ def format_decisions(rows, probabilities):
     return results
 
 
-class VLPCDEngine:
+class OptionReadout:
     """Independent multimodal decisions batched in one model forward pass."""
 
     def __init__(self, model, processor):
@@ -186,6 +186,9 @@ class VLPCDEngine:
         return format_decisions(rows, probabilities)
 
 
+VLPCDEngine = OptionReadout   # the earlier name
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", required=True)
@@ -201,7 +204,7 @@ def main():
         rows = rows[:args.limit]
     for row in rows:
         row["image_file"] = str(args.manifest.parent / row["images"][0])
-    engine = VLPCDEngine.from_pretrained(args.model, max_pixels=args.max_pixels)
+    engine = OptionReadout.from_pretrained(args.model, max_pixels=args.max_pixels)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("w") as stream:
         for start in range(0, len(rows), args.batch_size):

@@ -24,5 +24,10 @@ Qwen-2.5-1B-RLCD, core/engine_torch.py, Apache License 2.0 (repository metadata)
   candidate logits at the answer position) follows it.
 
 AlpaSim, Apache License 2.0.
-  The closed-loop simulator of the paper. The executor's JSON interface serves its egodriver service through the
-  AlpaSim driver (to be added); AlpaSim itself is not included.
+  The closed-loop simulator of the paper. superglance/alpasim/driver.py serves AlpaSim's egodriver gRPC interface
+  (AlpaSim's alpasim_grpc package, imported, not included), and superglance/eval/pai_inputs.py re-projects f-theta
+  frames with the camera model of AlpaSim's rectification.py. AlpaSim itself is not included.
+
+Waymo Open Dataset, rater_feedback_utils.py, Copyright 2025 The Waymo Open Dataset Authors, Apache License 2.0.
+  https://github.com/waymo-research/waymo-open-dataset
+  superglance/builders/pools/rater_feedback_utils.py is that file, unchanged: the WOD-E2E rater feedback score.

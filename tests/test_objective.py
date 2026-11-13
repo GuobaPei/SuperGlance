@@ -1,4 +1,4 @@
-"""CPU self-check of the training objectives on toy batches (about 10 s, torch only):
+"""CPU self-check of the training objectives on toy batches (about 10 s; needs torch and Pillow, which qa_pairs imports):
 
 1. QA rows, stages 1-2: permutation_loss called as superglance/train/qa.py calls it, on two option orders built by
    permute_row (identity and a cyclic shift s), for 2 to 9 options and every shift. The paired-draw estimate of the
@@ -131,7 +131,7 @@ def check_kl_and_rl():
     torch.manual_seed(6)
     via_route = estimated_grad(lambda z: permutation_loss(   # the stage-3 RL config's route: every row a reward row
         z, torch.zeros(n, dtype=torch.long), counts, canon, consistency_weight=0.0, samples=32, pair_reward="independent",
-        view_target=torch.full((n, k), 1.0 / k), soft_rows=ones, soft_objective="grpo", view_reward=rewards, reward_rows=ones,
+        view_target=torch.full((n, k), 1.0 / k), soft_rows=ones, soft_objective="exact_rl", view_reward=rewards, reward_rows=ones,
         view_ref=ref, rl_kl=beta)[0], logits)
     direct = estimated_grad(lambda z: exact_rl_loss(z, rewards, ref, counts, 32, beta), logits)
     z = logits.clone().requires_grad_(True)

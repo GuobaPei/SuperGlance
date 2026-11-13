@@ -67,7 +67,7 @@ def main():
         kind = re.search(r"\.(self_attn|linear_attn|mlp)\.(\w+)\.weight$", key)
         kinds.setdefault(f"{kind.group(1)}.{kind.group(2)}", []).append(value)
     info = {
-        "base_model": str(args.model), "adapter": str(args.adapter), "scale": scale, "merged_tensors": merged,
+        "base_model": args.model.name, "adapter": args.adapter.name, "scale": scale, "merged_tensors": merged,
         "rounding": "W' = round_to_checkpoint_dtype(W.float() + scale * B.float() @ A.float()); other tensors copied bit-exactly",
         "relative_delta_norm_by_module": {k: {"n": len(v), "mean": sum(v) / len(v), "max": max(v)} for k, v in sorted(kinds.items())},
         "seconds": round(time.time() - started, 1),

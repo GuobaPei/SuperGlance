@@ -4,7 +4,7 @@ every local batch.
 QA rows (stages 1-3): joint_brier_pg, the paired-draw Brier policy gradient on the joint answer of a question's two
 option orders, plus content_js (answer-content Jensen-Shannon; weight 0 in every stage). Policy rows (stage 3):
 soft_log_score toward the supervised target (soft_objective "log"), or exact_rl_loss, the exact expected reward with a
-KL term to the supervised policy (soft_objective "grpo", RL).
+KL term to the supervised policy (soft_objective "exact_rl", RL; "grpo" is its earlier name).
 """
 import math
 
@@ -83,15 +83,16 @@ def joint_brier_pg(logits, view_gold, counts, samples=32, view_target=None, cano
 
 def soft_log_score(logits, targets, counts):
     """Cross-entropy against a target distribution (the log score, a proper scoring rule), mean over rows.
-    Used for 16-way soft targets, where the Brier gradient carries a factor p_k ~ 1/16 and barely trains."""
+    Used for the policy rows' soft targets over K candidates, where the Brier gradient carries a factor p_k ~ 1/K and
+    barely trains."""
     terms = [-(targets[i][:int(k)] * logits[i][:int(k)].float().log_softmax(-1)).sum() for i, k in enumerate(counts)]
     return torch.stack(terms).mean()
 
 
 def exact_rl_loss(logits, rewards, ref, counts, samples, kl):
-    """Stage-3 RL (soft_objective "grpo"): per row, -sum_k p_k (r_k - sum_j p_j r_j) log p_k with p held fixed, the exact
-    expectation over all k candidates (no draws; the advantage is not normalized per row), plus kl * KL(p || softmax(ref)),
-    ref = the supervised policy's head logits. `samples` is not used."""
+    """Stage-3 RL (soft_objective "exact_rl"; "grpo" is its earlier name): per row, -sum_k p_k (r_k - sum_j p_j r_j) log p_k
+    with p held fixed, the exact expectation over all k candidates (no draws; the advantage is not normalized per row), plus
+    kl * KL(p || softmax(ref)), ref = the supervised policy's head logits. `samples` is not used."""
     terms = []
     for i, k in enumerate(counts):
         logp = logits[i][:int(k)].float().log_softmax(-1)
@@ -105,10 +106,10 @@ def exact_rl_loss(logits, rewards, ref, counts, samples, kl):
 def permutation_loss(logits, view_gold, counts, canonical_index,
                      consistency_weight=0.1, samples=32, pair_reward="independent", view_target=None, soft_rows=None,
                      soft_objective="brier", view_reward=None, reward_rows=None, view_ref=None, rl_kl=0.0):
-    if soft_objective in ("log", "grpo") and soft_rows is not None and bool(soft_rows.any()):
+    if soft_objective in ("log", "exact_rl", "grpo") and soft_rows is not None and bool(soft_rows.any()):
         soft = soft_rows.bool()
         pairs_soft = soft[::2]  # both views of a QA share the flag
-        rew = (reward_rows.bool() if (soft_objective == "grpo" and reward_rows is not None) else torch.zeros_like(soft)) & soft
+        rew = (reward_rows.bool() if (soft_objective in ("exact_rl", "grpo") and reward_rows is not None) else torch.zeros_like(soft)) & soft
         parts, weights = [], []
         if bool((soft & ~rew).any()):
             parts.append(soft_log_score(logits[soft & ~rew], view_target[soft & ~rew], counts[soft & ~rew]))
@@ -131,4 +132,4 @@ def permutation_loss(logits, view_gold, counts, canonical_index,
     else:
         raise ValueError(f"QA rows need pair_reward 'joint', got {pair_reward}")
     js = content_js(logits, canonical_index, counts).mean()
-    return rlcd + consistency_weight * js, {"rlcd": rlcd.detach(), "content_js": js.detach()}
+    return rlcd + consistency_weight * js, {"objective": rlcd.detach(), "content_js": js.detach()}

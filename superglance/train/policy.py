@@ -3,8 +3,9 @@
 
 Policy rows (no_options) are read by the Policy Head and QA rows by the option letters, both from the final hidden
 state at the answer position in float32 (superglance.data.policy.readout). soft_objective "log" trains toward the soft
-target (configs/stage3_sft*.json); "grpo" maximizes the exact expected reward with a KL term to the supervised policy
-(configs/stage3_rl.json). QA rows keep the stage-1/2 objective with a KL term to the stage-2 model.
+target (configs/stage3_sft*.json); "exact_rl" (earlier name "grpo") maximizes the exact expected reward over every
+candidate with a KL term to the supervised policy (configs/stage3_rl.json). QA rows keep the stage-1/2 objective with a KL
+term to the stage-2 model. The config key policy_head (earlier name choice256) adds the Policy Head of choice_k rows.
 Run: torchrun --nproc_per_node 8 -m superglance.train.policy --config CONFIG --model MODEL --data DATA --output OUT
 """
 import argparse
@@ -49,7 +50,7 @@ def attach_lora(model, cfg):
     return get_peft_model(model, LoraConfig(
         r=cfg["lora_rank"], lora_alpha=cfg["lora_alpha"], lora_dropout=float(cfg.get("lora_dropout", 0.0)),
         target_modules=cfg.get("lora_target_modules", Q35_LORA_TARGETS),
-        task_type="CAUSAL_LM", modules_to_save=["choice_head"] if cfg.get("choice256") else None,
+        task_type="CAUSAL_LM", modules_to_save=["choice_head"] if cfg.get("policy_head") else None,
     ))
 
 
@@ -342,6 +343,8 @@ def main():
     parser.add_argument("--init-adapter", help="adapter and Policy Head to continue (last supervised phase, RL)")
     args = parser.parse_args()
     cfg = json.loads(args.config.read_text())
+    if "choice256" in cfg:   # the earlier name of policy_head
+        cfg["policy_head"] = cfg.pop("choice256")
     if args.init_adapter:
         cfg["init_adapter"] = args.init_adapter
     if args.consistency_weight is not None:
@@ -360,8 +363,8 @@ def main():
     )
     model.model.visual.requires_grad_(False)
     model.config.use_cache = False
-    if cfg.get("choice256"):  # the Policy Head: choice_k candidates, zero init, trained and saved with the adapter
-        model.choice_head = torch.nn.Linear(model.config.text_config.hidden_size, int(cfg.get("choice_k", 256)), dtype=model.dtype)
+    if cfg.get("policy_head"):  # the Policy Head: choice_k candidates, zero init, trained and saved with the adapter
+        model.choice_head = torch.nn.Linear(model.config.text_config.hidden_size, int(cfg["choice_k"]), dtype=model.dtype)
         torch.nn.init.zeros_(model.choice_head.weight)
         torch.nn.init.zeros_(model.choice_head.bias)
     model = attach_lora(model, cfg)
@@ -369,19 +372,19 @@ def main():
     train = PermutationDataset(args.data / "train.jsonl", pair_mode=cfg["pair_mode"], seed=cfg["seed"], pair_rounds=args.pair_rounds)
     dev = PermutationDataset(args.data / "dev.jsonl", pair_mode="swap", seed=cfg["seed"] + 100)
     max_options = max(len(row["answers"]) for dataset in (train, dev) for row in dataset.rows)
-    if cfg.get("choice256"):  # the head's width must equal every policy (no_options) row's candidate count
+    if cfg.get("policy_head"):  # the head's width must equal every policy (no_options) row's candidate count
         widths = {len(row["answers"]) for dataset in (train, dev) for row in dataset.rows if row.get("no_options")}
-        assert widths == {int(cfg.get("choice_k", 256))}, ("choice_k", cfg.get("choice_k", 256), "rows", sorted(widths))
+        assert widths == {int(cfg["choice_k"])}, ("choice_k", cfg["choice_k"], "rows", sorted(widths))
     letters = [len(row["answers"]) for dataset in (train, dev) for row in dataset.rows if not row.get("no_options")]
     max_letters = max(letters) if letters else 16
     answer_boundary = validate_answer_boundary(processor, max_letters)
     token_ids = candidate_token_ids(processor, max_letters)
-    assert cfg.get("soft_objective") != "grpo" or not cfg.get("rl_kl_weight") or train._ref is not None, "grpo KL needs <stem>_ref.npy"
+    assert cfg.get("soft_objective") not in ("exact_rl", "grpo") or not cfg.get("rl_kl_weight") or train._ref is not None, "exact_rl KL needs <stem>_ref.npy"
     trainer = PermutationTrainer(
         model=model, args=training_arguments(cfg, args.output, args.max_steps),
         train_dataset=train, eval_dataset=dev,
         data_collator=PermutationCollator(processor, max_options),
-        token_ids=token_ids, samples=cfg["reward_samples"],
+        token_ids=token_ids, samples=cfg["reward_samples"],   # QA rows only: exact_rl sums over every candidate
         consistency_weight=cfg["consistency_weight"],
         mixture_config=cfg.get("mixture_sampling"),
         kl_weight=cfg.get("kl_weight", 0.0),

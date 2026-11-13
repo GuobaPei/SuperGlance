@@ -1,12 +1,25 @@
-# training and inference (the versions of the paper's runs)
+# training and inference (the versions of the paper's runs; torchvision: the release paired with torch 2.10)
 torch==2.10.*
+torchvision==0.25.*
 transformers==5.17.*
 peft==0.21.*
 deepspeed==0.18.1
 flash-linear-attention==0.5.2
-triton==3.7.1
 accelerate
 safetensors
 numpy
 pillow
-# the executor and the NAVSIM rewards run in NAVSIM's own environment (NAVSIM devkit v1.1 + nuPlan devkit)
+# then Triton 3.7.1 without the dependency check (torch's wheel pins another Triton; see README, Installation):
+#   pip install --no-deps triton==3.7.1
+# optional for stage-3 supervised training, a speed-up the paper's supervised runs used (README): liger-kernel, causal-conv1d
+# data builders and evaluation
+opencv-python-headless
+pandas
+pyarrow
+av
+requests
+huggingface_hub
+grpcio
+# WOD-E2E rows and submissions: waymo-open-dataset (or set WOD_PROTOS to protos generated from its .proto files);
+# the AlpaSim driver: AlpaSim's alpasim_grpc package (installed with AlpaSim);
+# the executor, the NAVSIM rewards and scene export run in NAVSIM's own environment (NAVSIM devkit v1.1 + nuPlan devkit)

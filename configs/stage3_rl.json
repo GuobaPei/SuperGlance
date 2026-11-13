@@ -1,7 +1,7 @@
 {
   "attention": "sdpa",
   "bf16": true,
-  "choice256": true,
+  "policy_head": true,
   "choice_k": 5273,
   "consistency_weight": 0.0,
   "deepspeed": "",
@@ -38,7 +38,7 @@
   "save_total_limit": 5,
   "seed": 20261023,
   "selection_metric": "source_macro_both_correct",
-  "soft_objective": "grpo",
+  "soft_objective": "exact_rl",
   "warmup_ratio": 0.05,
   "weight_decay": 0.01,
   "workers": 4,

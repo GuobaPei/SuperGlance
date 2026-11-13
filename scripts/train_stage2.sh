@@ -10,6 +10,7 @@ cd "$(dirname "$0")/.."
 : "${DATA:?stage-2 question directory}"
 STAGE1=${STAGE1:-runs/stage1/merged}; OUT=${OUT:-runs/stage2}
 export PYTORCH_CUDA_ALLOC_CONF=${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True} TOKENIZERS_PARALLELISM=false OMP_NUM_THREADS=4
+export FLA_TILELANG=0   # flash-linear-attention's Triton kernels, as the paper's stage-1 and stage-2 runs (no effect without TileLang)
 torchrun --standalone --nproc_per_node=8 -m superglance.train.qa --config configs/stage2_driving_qa.json \
   --model "$STAGE1" --data "$DATA" --output "$OUT/train" --pair-mode swap --pair-rounds 1 "$@"
 CUDA_VISIBLE_DEVICES="" python -m superglance.model.merge --model "$STAGE1" --adapter "$OUT/train/final" --output "$OUT/merged"

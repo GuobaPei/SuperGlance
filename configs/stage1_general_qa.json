@@ -20,7 +20,7 @@
   "lora_rank": 32,
   "lora_alpha": 64,
   "bf16": true,
-  "gradient_checkpointing": false,
+  "gradient_checkpointing": true,
   "deepspeed": "zero2.json",
   "pair_mode": "swap",
   "consistency_weight": 0.0,
