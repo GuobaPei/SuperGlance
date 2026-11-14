@@ -7,7 +7,7 @@
 
 ### Driving at a Glance with a Vision-Language Model
 
-[![arXiv](https://img.shields.io/badge/arXiv-coming%20soon-b31b1b.svg?logo=arxiv&logoColor=white)](https://guobapei.github.io/SuperGlance/)
+[![Paper](https://img.shields.io/badge/%F0%9F%93%84%20Paper-PDF-b31b1b.svg)](https://guobapei.github.io/SuperGlance/SuperGlance.pdf)
 [![Project page](https://img.shields.io/badge/Project-Page-E8453C.svg?logo=googlechrome&logoColor=white)](https://guobapei.github.io/SuperGlance/)
 [![Video](https://img.shields.io/badge/%E2%96%B6%20Video-2%20min-1E2235.svg)](https://guobapei.github.io/SuperGlance/#video)
 [![Models](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-ffd21e.svg)](https://huggingface.co/pei2333/SuperGlance-9B)
@@ -31,7 +31,7 @@ Zhuoxuan Li<sup>6</sup>, Yuguang Yang<sup>7</sup>, [Rongjunchen Zhang](https://s
 
 ## News
 
-- **2026/11** The paper is submitted to arXiv (link soon). Code, the three checkpoints and the [SuperGlance-QA](https://huggingface.co/datasets/pei2333/SuperGlance-QA) data are released, with the [project page](https://guobapei.github.io/SuperGlance/) and its [video](https://guobapei.github.io/SuperGlance/#video).
+- **2026/11** The [paper](https://guobapei.github.io/SuperGlance/SuperGlance.pdf) is out (arXiv link soon). Code, the three checkpoints and the [SuperGlance-QA](https://huggingface.co/datasets/pei2333/SuperGlance-QA) data are released, with the [project page](https://guobapei.github.io/SuperGlance/) and its [video](https://guobapei.github.io/SuperGlance/#video).
 
 ## Highlights
 
