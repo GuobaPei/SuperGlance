@@ -1,10 +1,44 @@
-# SuperGlance: Driving at a Glance with a Vision-Language Model
+<div align="center">
 
-[Project page](https://guobapei.github.io/SuperGlance/) | [Code](https://github.com/GuobaPei/SuperGlance) |
-Weights: [SuperGlance-9B](https://huggingface.co/pei2333/SuperGlance-9B),
-[SuperGlance-9B-Stage1](https://huggingface.co/pei2333/SuperGlance-9B-Stage1),
-[SuperGlance-9B-Stage2](https://huggingface.co/pei2333/SuperGlance-9B-Stage2) |
-QA data: [SuperGlance-QA](https://huggingface.co/datasets/pei2333/SuperGlance-QA)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/wordmark_dark.svg">
+  <img src="docs/wordmark.svg" width="420" alt="SuperGlance">
+</picture>
+
+### Driving at a Glance with a Vision-Language Model
+
+[![arXiv](https://img.shields.io/badge/arXiv-coming%20soon-b31b1b.svg?logo=arxiv&logoColor=white)](https://guobapei.github.io/SuperGlance/)
+[![Project page](https://img.shields.io/badge/Project-Page-E8453C.svg?logo=googlechrome&logoColor=white)](https://guobapei.github.io/SuperGlance/)
+[![Models](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-ffd21e.svg)](https://huggingface.co/pei2333/SuperGlance-9B)
+[![QA data](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-QA%20data-ffd21e.svg)](https://huggingface.co/datasets/pei2333/SuperGlance-QA)
+[![One plan](https://img.shields.io/badge/one%20plan-84%20ms-4B44C6.svg)](#main-results)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
+[Jieyuan Pei](https://scholar.google.com/citations?user=xAAOO_0AAAAJ)<sup>1,2,3*</sup>, Xin Yan<sup>4*</sup>, [Mingwei Xu](https://scholar.google.com/citations?user=jOZPNeQAAAAJ)<sup>5</sup>, Haiyi Zhang<sup>3</sup>, Siyu Zou<sup>2</sup>, Zhangyi Hu<sup>2,3</sup>,<br>
+Zhuoxuan Li<sup>6</sup>, Yuguang Yang<sup>7</sup>, [Rongjunchen Zhang](https://scholar.google.com/citations?user=Ae41dcUAAAAJ)<sup>2†</sup>, Cheng Chi<sup>6</sup>, Hui Xiong<sup>3✉</sup>, [Yan Wang](https://scholar.google.com/citations?user=QOZnsYYAAAAJ)<sup>1✉</sup>
+
+<sub><sup>1</sup>Institute for AI Industry Research (AIR), Tsinghua University · <sup>2</sup>HiThink Research · <sup>3</sup>The Hong Kong University of Science and Technology (Guangzhou) · <sup>4</sup>Agency for Science, Technology and Research (A&#42;STAR), Singapore · <sup>5</sup>University of Washington · <sup>6</sup>Renmin University of China · <sup>7</sup>Beihang University</sub><br>
+<sub><sup>&#42;</sup>Equal contribution · <sup>†</sup>Project leader · <sup>✉</sup>Corresponding authors</sub>
+
+</div>
+
+<p align="center"><img src="docs/teaser.png" width="100%" alt="GPU time per plan, driving benchmarks and question answering"></p>
+<p align="center"><sub>SuperGlance plans in one forward pass, 6.2 times faster than Qwen-Drive-1.0, and leads it on ten of eleven QA benchmarks and on every driving benchmark (Figure 1 of the paper; ring bars start above zero).</sub></p>
+
+## News
+
+- **2026/11** The paper is submitted to arXiv (link soon). Code, the three checkpoints and the [SuperGlance-QA](https://huggingface.co/datasets/pei2333/SuperGlance-QA) data are released, with the [project page](https://guobapei.github.io/SuperGlance/).
+
+## Highlights
+
+- **One hidden state, one pass.** Before a VLM writes its first token, it has already read the scene into one hidden state. SuperGlance reads it with a linear Policy Head that scores a fixed set of 5,273 candidate trajectories, so a plan takes one forward pass.
+- **Exact expected reward.** With the candidate set fixed, every candidate's reward is computed offline, so supervised targets can be reward-weighted and reinforcement learning maximizes the exact expected reward over all candidates.
+- **Still a VLM.** Multiple-choice training, with questions built against shortcuts and answered in two option orders, keeps the VLM's visual abilities in the same pass: SuperGlance answers visual multiple-choice questions as well as its base VLM does by decoding.
+- **84 ms per plan.** 6.2 times faster than Qwen-Drive-1.0 (518 ms), and it plans at least as well on NAVSIM, PAI-AV and WOD-E2E. In AlpaSim closed loop, with GPU time charged as delay, its lead in km per at-fault incident grows from 2.8 to 3.9 times.
+
+## Method
+
+<p align="center"><img src="docs/arch.png" width="95%" alt="SuperGlance architecture"></p>
 
 SuperGlance turns a vision-language model (VLM) into a driving policy that plans in one forward pass. The model reads the
 front camera (the current frame and three past frames), the ego state and the navigation command. A linear Policy Head on
@@ -16,10 +50,6 @@ images and text (stage 1) and on driving scenes (stage 2) keeps the VLM's visual
 first supervised toward a reward-weighted target over the candidates, then with reinforcement learning (RL) on the exact
 expected reward over all candidates.
 
-![SuperGlance: GPU time per plan (left), driving benchmarks (middle), question answering (right)](docs/teaser.png)
-
-*Figure 1 of the paper: GPU time per plan (left), the driving benchmarks (middle) and question answering (right).*
-
 | stage | data | objective | start | steps x rows |
 |---|---|---|---|---|
 | 1 general QA | 1.16 M visual and text questions | joint Brier policy gradient on two option orders (32 draws) + 0.1 KL to the base | Qwen3.5-9B | 7,813 x 64 |
@@ -30,6 +60,24 @@ expected reward over all candidates.
 
 Stages 1 and 2 are merged into the model before the next stage; stage 3 trains one adapter and the Policy Head. All runs
 use 8 GPUs.
+
+## Main results
+
+The final model, SuperGlance-9B, as reported in the paper:
+
+| benchmark | metric | SuperGlance-9B |
+|---|---|---|
+| NAVSIM v1.1 navtest (Table 4) | PDMS | 91.5 |
+| WOD-E2E test (Table 5) | RFS / ADE 3 s / ADE 5 s (m) | 7.99 / 1.19 / 2.55 |
+| PAI-AV open loop (Table 6) | ADE 3 s / 5 s (m), one plan | 0.373 / 1.076 |
+| AlpaSim, 916 scenarios (Table 3), no delay | km per at-fault incident / pass (%) | 1.318 / 73.5 |
+| AlpaSim, delay = GPU time per plan | km per at-fault incident / pass (%) | 1.248 / 72.2 |
+| Language2Drive, NAVSIM track (Table 7) | PCS | 56.5 |
+| DriveLM / 3DSRBench / CV-Bench (Table 2) | accuracy (%) | 85.51 / 58.29 / 87.40 |
+| GPU time per plan (one H200) | ms | 84 |
+
+<p align="center"><img src="docs/latency.png" width="100%" alt="Time per plan and distance in closed loop"></p>
+<p align="center"><sub>Time per plan and distance in closed loop (Figure 6 of the paper). Top: 84 ms of GPU time per plan in our single pass, 518 ms in Qwen-Drive-1.0 with 10 flow steps and 5,558 ms when our VLM writes the plan as text. Bottom: in AlpaSim, with each time as the plan's delay, km per at-fault incident holds for both planners up to 300 ms and drops beyond.</sub></p>
 
 ## Installation
 
@@ -389,21 +437,6 @@ MODEL=<stage-2 model> ADAPTER=<final adapter> OUT=runs/qa/stage3 ROOT=<...> bash
 benchmarks, the DriveLM test questions of our scene split). The readout is the option letters' logits after the
 non-thinking chat prefix, with no generation. `python -m superglance.eval.qa_table <OUT> ...` prints Table 2's rows for the
 given runs.
-
-## Main results
-
-The final model, SuperGlance-9B, as reported in the paper:
-
-| benchmark | metric | SuperGlance-9B |
-|---|---|---|
-| NAVSIM v1.1 navtest (Table 4) | PDMS | 91.5 |
-| WOD-E2E test (Table 5) | RFS / ADE 3 s / ADE 5 s (m) | 7.99 / 1.19 / 2.55 |
-| PAI-AV open loop (Table 6) | ADE 3 s / 5 s (m), one plan | 0.373 / 1.076 |
-| AlpaSim, 916 scenarios (Table 3), no delay | km per at-fault incident / pass (%) | 1.318 / 73.5 |
-| AlpaSim, delay = GPU time per plan | km per at-fault incident / pass (%) | 1.248 / 72.2 |
-| Language2Drive, NAVSIM track (Table 7) | PCS | 56.5 |
-| DriveLM / 3DSRBench / CV-Bench (Table 2) | accuracy (%) | 85.51 / 58.29 / 87.40 |
-| GPU time per plan (one H200) | ms | 84 |
 
 ## Building the training data
 
