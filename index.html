@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SuperGlance: Driving at a Glance with a Vision-Language Model</title>
+<meta name="description" content="SuperGlance turns a decoder-only vision-language model, Qwen3.5-9B, into an encoder-style driving policy that plans in one forward pass.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="SuperGlance: Driving at a Glance with a Vision-Language Model">
+<meta property="og:description" content="SuperGlance turns a decoder-only vision-language model, Qwen3.5-9B, into an encoder-style driving policy that plans in one forward pass.">
+<link rel="canonical" href="https://guobapei.github.io/SuperGlance/">
+<meta property="og:url" content="https://guobapei.github.io/SuperGlance/">
+<meta property="og:image" content="https://guobapei.github.io/SuperGlance/assets/fig_teaser_choose.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='3' y='3' width='10' height='10' rx='2.5' fill='%23E8453C'/%3E%3C/svg%3E">
+<style>
+:root{--indigo:#4B44C6;--coral:#E8453C;--ink:#1E2235;--mute:#6E7283;--line:#E3E4EB;--soft:#F6F6FA;color-scheme:light}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:#fff;color:var(--ink);font:17px/1.65 system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--indigo);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:960px;margin:0 auto;padding:0 20px 80px}
+header{text-align:center;padding:30px 0 0}
+.logos{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:18px 32px;margin:0 0 46px}
+.logos>div{display:flex;align-items:center;gap:30px}
+.logos img{display:block;height:calc(38px * var(--s,1));width:auto}
+.affils .mk{height:1.1em;width:auto;vertical-align:-.22em;margin-right:4px}
+h1{font-family:"Times New Roman",Georgia,serif;font-size:2.55rem;line-height:1.17;font-weight:700;margin:0 auto 26px;max-width:860px;text-wrap:balance}
+.authors{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 20px;max-width:860px;margin:0 auto;font-size:1.06rem}
+.authors span{white-space:nowrap}
+sup{font-size:.66em;line-height:0;margin-left:1px;color:var(--coral)}
+.affils{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 18px;max-width:880px;margin:12px auto 0;color:var(--mute);font-size:.9rem;line-height:1.5}
+.links{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:30px}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 17px 8px 14px;border:1px solid var(--ink);border-radius:999px;background:var(--ink);color:#fff;font-size:.95rem;line-height:1.2}
+a.btn:hover{background:var(--indigo);border-color:var(--indigo);text-decoration:none}
+.btn svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn.todo{background:none;color:var(--mute);border:1px dashed #B5B7C4;cursor:default}
+.btn.todo em{font-style:normal;font-size:.75rem;padding:1px 7px;border-radius:999px;background:var(--soft)}
+.ckpt{margin:14px 0 0;color:var(--mute);font-size:.85rem}
+.ckpt a{white-space:nowrap}
+.teaser{margin-top:48px}
+main section{margin-top:72px}
+h2{font-size:1.5rem;line-height:1.3;font-weight:650;text-align:center;margin:0 0 22px}
+figure{margin:0}
+figure img{display:block;width:100%;height:auto}
+figcaption{max-width:820px;margin:14px auto 0;color:var(--mute);font-size:.9rem;line-height:1.55}
+figcaption b{color:var(--ink);font-weight:600}
+.teaser figcaption{text-align:center}
+.prose{max-width:820px;margin:0 auto}
+.prose p{margin:0 0 1em}
+video{display:block;width:100%;height:auto;aspect-ratio:16/9;background:#000;border-radius:10px}
+.result+.result{margin-top:56px}
+.method-fig{margin-top:30px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;margin:0 auto;font-size:.86rem;line-height:1.35;font-variant-numeric:tabular-nums;border-top:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink)}
+th,td{padding:5px 9px;text-align:center}
+th{font-weight:600}
+thead tr:last-child th{border-bottom:1px solid var(--ink)}
+th.cmid{background:linear-gradient(var(--ink),var(--ink)) bottom/calc(100% - 12px) 1px no-repeat}
+.l{text-align:left}.r{text-align:right}
+tr.rule>*{border-top:1px solid var(--ink)}
+tr.ours>td:first-child{color:var(--coral);font-weight:600}
+.hb{padding:1px 3px;border-radius:2px}
+.sl{padding:0 2px}
+.bib{position:relative;max-width:820px;margin:0 auto}
+pre{margin:0;padding:16px 18px;background:var(--soft);border:1px solid var(--line);border-radius:8px;font:13.5px/1.6 ui-monospace,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+.copy{position:absolute;top:10px;right:10px;font:inherit;font-size:.8rem;padding:4px 11px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink);cursor:pointer}
+.copy:hover{border-color:var(--indigo);color:var(--indigo)}
+@media (min-width:700px){.abstract p{text-align:justify;hyphens:auto}}
+@media (max-width:600px){
+body{font-size:16px}header{padding-top:22px}h1{font-size:1.75rem;margin-bottom:20px}
+.logos{justify-content:center;gap:14px 22px;margin-bottom:30px}.logos>div{gap:22px}.logos img{height:calc(27px * var(--s,1))}
+.authors{font-size:1rem;gap:2px 14px}.affils{font-size:.84rem;gap:2px 12px}
+.btn{font-size:.9rem;padding:7px 14px 7px 12px}
+main section{margin-top:54px}h2{font-size:1.3rem}figcaption{font-size:.86rem}
+table{font-size:.7rem}th,td{padding:4px 3px}.hb{padding:1px 2px}.sl{padding:0 1px}pre{font-size:12px;padding:46px 14px 14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<div class="logos"><div><img src="assets/logos/hithink.png" alt="HiThink Research" style="--s:1.15"></div><div><img src="assets/logos/tsinghua_air.png" alt="Institute for AI Industry Research (AIR), Tsinghua University" style="--s:1"><img src="assets/logos/hkust_gz.png" alt="The Hong Kong University of Science and Technology (Guangzhou)" style="--s:1"></div></div>
+<h1>SuperGlance: Driving at a Glance with a Vision-Language Model</h1>
+<div class="authors"><span>Jieyuan Pei<sup>1,2,3,*</sup></span><span>Xin Yan<sup>4,*</sup></span><span>Mingwei Xu<sup>5</sup></span><span>Haiyi Zhang<sup>3</sup></span><span>Siyu Zou<sup>2</sup></span><span>Zhangyi Hu<sup>2,3</sup></span><span>Zhuoxuan Li<sup>6</sup></span><span>Yuguang Yang<sup>7</sup></span><span>Rongjunchen Zhang<sup>2,†</sup></span><span>Cheng Chi<sup>6</sup></span><span>Hui Xiong<sup>3,✉</sup></span><span>Yan Wang<sup>1,✉</sup></span></div>
+<div class="affils"><span><img class="mk" src="assets/logos/mark_tsinghua_air.png" alt=""><sup>1</sup>Institute for AI Industry Research (AIR), Tsinghua University</span><span><img class="mk" src="assets/logos/mark_hithink.png" alt=""><sup>2</sup>HiThink Research</span><span><img class="mk" src="assets/logos/mark_hkust_gz.png" alt=""><sup>3</sup>The Hong Kong University of Science and Technology (Guangzhou)</span><span><img class="mk" src="assets/logos/mark_astar.png" alt=""><sup>4</sup>Agency for Science, Technology and Research (A*STAR), Singapore</span><span><img class="mk" src="assets/logos/mark_uw.png" alt=""><sup>5</sup>University of Washington</span><span><img class="mk" src="assets/logos/mark_ruc.png" alt=""><sup>6</sup>Renmin University of China</span><span><img class="mk" src="assets/logos/mark_beihang.png" alt=""><sup>7</sup>Beihang University</span></div>
+<div class="affils"><span><sup>*</sup>Equal contribution</span><span><sup>†</sup>Project leader</span><span><sup>✉</sup>Corresponding authors</span></div>
+<div class="links">
+<!-- PLACEHOLDER: arXiv id (ARXIV_ID in build_page.py) --><span class="btn todo" title="Link to be added"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>Paper<em>soon</em></span>
+<a class="btn" href="https://github.com/GuobaPei/SuperGlance"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>Code</a>
+<a class="btn" href="https://huggingface.co/pei2333/SuperGlance-9B"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/></svg>Models</a>
+<a class="btn" href="https://huggingface.co/datasets/pei2333/SuperGlance-QA"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>Dataset</a>
+<!-- PLACEHOLDER: video over the size limit: add a hosted link --><span class="btn todo" title="Link to be added"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>Video<em>soon</em></span>
+</div>
+<p class="ckpt">Checkpoints: <a href="https://huggingface.co/pei2333/SuperGlance-9B">SuperGlance-9B</a> (final) · <a href="https://huggingface.co/pei2333/SuperGlance-9B-Stage1">SuperGlance-9B-Stage1</a> · <a href="https://huggingface.co/pei2333/SuperGlance-9B-Stage2">SuperGlance-9B-Stage2</a></p>
+</header>
+<main>
+<figure class="teaser"><a href="assets/fig_teaser_choose.png"><img src="assets/fig_teaser_choose.png" width="1839" height="875" alt="SuperGlance and benchmark results"></a><figcaption>SuperGlance plans in one forward pass, 6.2 times faster than Qwen-Drive-1.0, and leads it on ten of eleven QA and all driving benchmarks; ring bars start above zero.</figcaption></figure>
+<section id="video">
+<h2>Video</h2>
+<!-- PLACEHOLDER: video link --><p class="ckpt" style="text-align:center">Video coming soon.</p>
+</section>
+<section id="abstract">
+<h2>Abstract</h2>
+<div class="prose abstract"><p>Autonomous driving is turning to vision-language-action models (VLAs). They answer and plan by decoding, one step at a time. Each step is another forward pass, so a plan can take over a second of GPU time. Embodied AI often pairs such a slow, reasoning System 2 with a fast System 1 that acts. Human drivers plan at a glance, with System 1. Faster designs usually put System 1 outside the vision-language model (VLM), in a planner without its abilities. Yet before a VLM writes its first token, it has already read the scene into one hidden state. We show that, once trained, this hidden state is enough to drive and to answer questions about what the model sees. SuperGlance reads it to turn a decoder-only VLM into an encoder-style driving policy. Its linear head scores a fixed set of 5,273 candidate trajectories. With the set fixed, rewards are computed offline, so supervised targets can be reward-weighted and reinforcement learning maximizes the exact expected reward. Before and during policy training, multiple-choice training keeps the VLM’s visual abilities in one pass, so the policy still answers questions about driving scenes. Training questions are built against shortcuts. Each must be answered right in two option orders. Against drift, a KL term keeps each stage near its starting model. One pass offers VLAs a more plausible path to System 1. SuperGlance answers visual multiple-choice questions as well as its base VLM does by decoding. It plans in 84 ms of GPU time, six times faster than Qwen-Drive-1.0, and at least as well on NAVSIM, PAI-AV and WOD-E2E. In AlpaSim closed loop, km per at-fault incident holds for both planners up to a 300-ms delay and drops beyond. With GPU time charged as delay, SuperGlance’s lead over Qwen-Drive-1.0 grows from 2.8 to 3.9 times. Delayed by 1.2 s, our model falls below Qwen-Drive-1.0 at its own 518 ms.</p></div>
+</section>
+<section id="method">
+<h2>Method</h2>
+<div class="prose"><p>SuperGlance turns a decoder-only vision-language model, Qwen3.5-9B, into an encoder-style driving policy that plans in one forward pass. A linear Policy Head on the last hidden state at the answer position, <code>[ANS]</code>, scores a fixed set of 5,273 candidate trajectories, and the language-model head still answers multiple-choice questions. As the set is fixed, every candidate’s reward is computed offline, so supervised targets can be reward-weighted and reinforcement learning maximizes the exact expected reward. Multiple-choice training before and during policy training keeps the VLM’s visual abilities in one pass.</p></div>
+<figure class="method-fig"><a href="assets/fig_arch.png"><img src="assets/fig_arch.png" width="1780" height="429" alt="Three ways a vision-language model produces a plan"></a><figcaption><b>Three ways a vision-language model produces a plan.</b> Only (c) has no loop: SuperGlance reads the last hidden state <i>h</i> once, at <code>[ANS]</code>, and its Policy Head gives a probability to each of 5,273 fixed candidates. Each bottom strip shows one plan’s measured GPU time to scale.</figcaption></figure>
+</section>
+<section id="results">
+<h2>Results</h2>
+<figure class="result"><a href="assets/fig_latency.png"><img src="assets/fig_latency.png" width="1738" height="533" alt="Time per plan and distance in closed loop"></a><figcaption><b>Time per plan and distance in closed loop.</b> One pass plans in 84 ms of GPU time, a 10-step flow expert in 518 ms and the same VLM writing text in 5,558 ms (top); each time (dotted) acts as the next 100-ms lag in AlpaSim (bottom). Both planners keep their distance per at-fault incident within 8% up to a 300-ms lag; at 1.2 s ours falls to 0.259 km, below Qwen-Drive-1.0 at its own 518 ms.</figcaption></figure>
+<figure class="result"><div class="tablewrap"><table>
+<thead><tr><th class="l">Method</th><th>RL</th><th>Coll.↓</th><th>Off-road↓</th><th>Prog.↑</th><th>km / incident↑</th><th>Pass↑</th></tr></thead>
+<tbody>
+<tr style="background:#ebebeb"><td class="l" colspan="7"><i>Each plan’s GPU time as delay</i></td></tr>
+<tr><td class="l">Qwen-Drive-1.0, 518 ms</td><td></td><td><span class="hb" style="background:#f7fbff">32.6</span><span class="sl">/</span><wbr><span class="hb" style="background:#cde7fd">18.1</span></td><td style="background:#b4dcfb">19.3</td><td style="background:#bee0fc">67.9</td><td><span class="hb" style="background:#d3eafd">0.229</span><span class="sl">/</span><wbr><span class="hb" style="background:#d0e9fd">0.317</span></td><td style="background:#bee0fc">36.6</td></tr>
+<tr><td class="l">+ reasoning, 1.2 s</td><td></td><td><span class="hb" style="background:#c8e5fc">26.7</span><span class="sl">/</span><wbr><span class="hb" style="background:#f7fbff">21.0</span></td><td style="background:#f7fbff">36.3</td><td style="background:#f7fbff">51.8</td><td><span class="hb" style="background:#f7fbff">0.145</span><span class="sl">/</span><wbr><span class="hb" style="background:#f7fbff">0.158</span></td><td style="background:#f7fbff">9.3</td></tr>
+<tr class="ours"><td class="l">SuperGlance, 84 ms</td><td>✓</td><td><span class="hb" style="background:#7ec2f8">10.9</span><span class="sl">/</span><wbr><span class="hb" style="background:#7ec2f8">6.8</span></td><td style="background:#7ec2f8">7.5</td><td style="background:#7ec2f8">88.5</td><td><span class="hb" style="background:#7ec2f8">0.970</span><span class="sl">/</span><wbr><span class="hb" style="background:#7ec2f8">1.248</span></td><td style="background:#7ec2f8">72.2</td></tr>
+<tr class="rule" style="background:#ebebeb"><td class="l" colspan="7"><i>No delay (simulator default)</i></td></tr>
+<tr><td class="l">Qwen-Drive-1.0</td><td></td><td><span class="hb" style="background:#cfe8fd">32.8</span><span class="sl">/</span><wbr><span class="hb" style="background:#dbeefd">14.4</span></td><td style="background:#f7fbff">15.4</td><td style="background:#c8e5fc">71.1</td><td><span class="hb" style="background:#dceefd">0.284</span><span class="sl">/</span><wbr><span class="hb" style="background:#deeffe">0.461</span></td><td style="background:#d4eafd">58.7</td></tr>
+<tr><td class="l">Qwen-Drive-1.0</td><td>✓</td><td><span class="hb" style="background:#f7fbff">43.6</span><span class="sl">/</span><wbr><span class="hb" style="background:#f7fbff">15.6</span></td><td style="background:#d1e9fd">13.1</td><td style="background:#f7fbff">57.3</td><td><span class="hb" style="background:#f7fbff">0.194</span><span class="sl">/</span><wbr><span class="hb" style="background:#f7fbff">0.383</span></td><td style="background:#f7fbff">53.6</td></tr>
+<tr class="ours"><td class="l">SuperGlance</td><td></td><td><span class="hb" style="background:#94ccf9">11.2</span><span class="sl">/</span><wbr><span class="hb" style="background:#93ccf9">6.0</span></td><td style="background:#9bd0fa">8.8</td><td style="background:#94ccf9">87.9</td><td><span class="hb" style="background:#99cffa">0.886</span><span class="sl">/</span><wbr><span class="hb" style="background:#9acffa">1.199</span></td><td style="background:#96cdf9">72.1</td></tr>
+<tr class="ours"><td class="l">SuperGlance</td><td>✓</td><td><span class="hb" style="background:#7ec2f8">10.6</span><span class="sl">/</span><wbr><span class="hb" style="background:#7ec2f8">5.9</span></td><td style="background:#7ec2f8">7.6</td><td style="background:#7ec2f8">88.6</td><td><span class="hb" style="background:#7ec2f8">0.975</span><span class="sl">/</span><wbr><span class="hb" style="background:#7ec2f8">1.318</span></td><td style="background:#7ec2f8">73.5</td></tr>
+</tbody></table></div><figcaption><b>AlpaSim closed loop.</b> With each plan’s GPU time as its delay, our RL model drives 3.9 times as far per at-fault incident as Qwen-Drive-1.0 (95% interval 3.3 to 4.7) and passes 72.2% of scenarios, against at most 36.6%. Qwen-Drive-1.0 plans with reasoning except in its 518 ms row. Coll. and km / incident: all / at-fault; Coll., off-road, progress and pass in %. Shading runs from the worst to the best value of each column within a group.</figcaption></figure>
+<figure class="result"><div class="tablewrap"><table>
+<thead><tr><th class="l"></th><th class="cmid" colspan="2">Qwen3.5-9B</th><th></th><th class="cmid" colspan="3">SuperGlance after stage</th></tr><tr><th class="l">Benchmark</th><th>letter</th><th><span style="color:#737373">decoded</span></th><th>Qwen-Drive-1.0</th><th>1</th><th>2</th><th>3</th></tr></thead>
+<tbody>
+<tr style="background:#ebebeb"><td class="l"><i>Vision</i></td><td></td><td><span style="color:#737373"></span></td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="l">CV-Bench</td><td style="background:#e4e2fb">86.36</td><td><span style="color:#737373">86.47</span></td><td style="background:#fbfaff">85.29</td><td style="background:#c1bff6">87.60</td><td style="background:#b8b5f4">87.66</td><td style="background:#cccaf7">87.40</td></tr>
+<tr><td class="l">BLINK</td><td style="background:#e8e6fc">79.37</td><td><span style="color:#737373">76.62</span></td><td style="background:#fbfaff">77.60</td><td style="background:#b8b5f4">84.68</td><td style="background:#d3d1f8">81.34</td><td style="background:#e8e6fc">79.37</td></tr>
+<tr><td class="l">3DSRBench</td><td style="background:#fbfaff">45.39</td><td><span style="color:#737373">57.09</span></td><td style="background:#f0eefd">46.81</td><td style="background:#c1bef5">60.27</td><td style="background:#b8b5f4">60.50</td><td style="background:#cdcbf8">58.29</td></tr>
+<tr style="background:#ebebeb"><td class="l"><i>Language</i></td><td></td><td><span style="color:#737373"></span></td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="l">MMLU</td><td style="background:#e0defa">75.91</td><td><span style="color:#737373">85.21</span></td><td style="background:#fbfaff">70.69</td><td style="background:#b8b5f4">79.79</td><td style="background:#c1bef5">79.63</td><td style="background:#cdcaf7">78.61</td></tr>
+<tr><td class="l">MMLU-Pro</td><td style="background:#e5e3fb">50.41</td><td><span style="color:#737373">73.93</span></td><td style="background:#fbfaff">44.35</td><td style="background:#b8b5f4">59.03</td><td style="background:#c3c0f6">57.98</td><td style="background:#cdcbf8">56.85</td></tr>
+<tr><td class="l">ARC-C</td><td style="background:#dfddfa">93.77</td><td><span style="color:#737373">96.16</span></td><td style="background:#fbfaff">91.38</td><td style="background:#b8b5f4">95.39</td><td style="background:#cbc8f7">95.14</td><td style="background:#c1bef5">95.31</td></tr>
+<tr><td class="l">HellaSwag</td><td style="background:#dad8fa">88.67</td><td><span style="color:#737373">89.49</span></td><td style="background:#fbfaff">81.83</td><td style="background:#c1bef5">91.00</td><td style="background:#b8b5f4">91.04</td><td style="background:#cccaf7">90.15</td></tr>
+<tr><td class="l">WinoGrande</td><td style="background:#dfddfa">72.53</td><td><span style="color:#737373">85.64</span></td><td style="background:#fbfaff">67.40</td><td style="background:#c7c4f6">76.40</td><td style="background:#b8b5f4">77.43</td><td style="background:#c7c4f6">76.40</td></tr>
+<tr><td class="l">BoolQ</td><td style="background:#e3e1fb">88.62</td><td><span style="color:#737373">88.29</span></td><td style="background:#fbfaff">87.65</td><td style="background:#b8b5f4">89.72</td><td style="background:#c4c1f6">89.48</td><td style="background:#cdcbf8">89.42</td></tr>
+<tr><td class="l">TruthfulQA</td><td style="background:#b8b5f4">74.42</td><td><span style="color:#737373">76.25</span></td><td style="background:#c6c3f6">72.95</td><td style="background:#e5e3fb">67.07</td><td style="background:#f0effd">66.22</td><td style="background:#fbfaff">65.61</td></tr>
+<tr style="background:#ebebeb"><td class="l"><i>Driving</i></td><td></td><td><span style="color:#737373"></span></td><td></td><td></td><td></td><td></td></tr>
+<tr><td class="l">DriveLM</td><td style="background:#fbfaff">60.81</td><td><span style="color:#737373">60.95</span></td><td style="background:#edecfd">65.06</td><td style="background:#d9d7f9">73.55</td><td style="background:#c2bff6">84.33</td><td style="background:#b8b5f4">85.51</td></tr>
+</tbody></table></div><figcaption><b>Question answering.</b> Accuracy (%) after each training stage, against our base model and Qwen-Drive-1.0’s 4B VLM, all read as one option letter except the decoded column (Qwen3.5-9B’s written replies, thinking off). After stage 3, our letter is level with or above those replies on every vision benchmark and 24.56 points above them on DriveLM, the only benchmark in our training data. Shading runs from the worst to the best score of each row.</figcaption></figure>
+</section>
+<section id="bibtex">
+<h2>BibTeX</h2>
+<div class="bib"><button class="copy" type="button">Copy</button><pre id="bib">@article{pei2026superglance,
+  title   = {{SuperGlance}: Driving at a Glance with a Vision-Language Model},
+  author  = {Pei, Jieyuan and Yan, Xin and Xu, Mingwei and Zhang, Haiyi and Zou, Siyu and Hu, Zhangyi and Li, Zhuoxuan and Yang, Yuguang and Zhang, Rongjunchen and Chi, Cheng and Xiong, Hui and Wang, Yan},
+  journal = {arXiv preprint arXiv:XXXX.XXXXX},
+  year    = {2026}
+}</pre></div>
+</section>
+</main>
+</div>
+<script>
+document.querySelector('.copy').addEventListener('click', function () {
+  var b = this, t = document.getElementById('bib').textContent;
+  function done() { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1500); }
+  if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(t).then(done); return; }
+  var a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select();
+  document.execCommand('copy'); a.remove(); done();
+});
+</script>
+</body>
+</html>
