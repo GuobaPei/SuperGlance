@@ -1,7 +1,7 @@
 """PAI-AV densification of a 4-s plan (8 poses at 0.5 s) to the log's 10 Hz over 5 s. lin: linear from the origin through
 the poses, 4-5 s at the last segment's velocity (superglance.eval.pai_ade.to10). spline: a cubic spline through the origin and
 the 8 poses, clamped at the logged ego velocity at 0 s and natural at 4 s, 4-5 s as lin; the paper's PAI-AV plans use it
-(supplement, Benchmark protocols). ade: ADE at 3 s and 5 s against the logged future. boot: the mean of per-frame values with
+(appendix, Benchmark protocols). ade: ADE at 3 s and 5 s against the logged future. boot: the mean of per-frame values with
 its 95 % interval over 10,000 resamples of the logs. Importing the module runs its self-check (10 m/s straight is exact under
 both)."""
 import numpy as np

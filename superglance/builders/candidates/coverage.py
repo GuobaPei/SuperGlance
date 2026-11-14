@@ -1,4 +1,4 @@
-"""The supplement's coverage table (Coverage of NAVSIM scenes) on the 10,549 held-out NAVSIM training scenes (the 2,000 evaluation scenes of
+"""The appendix's coverage table (Coverage of NAVSIM scenes) on the 10,549 held-out NAVSIM training scenes (the 2,000 evaluation scenes of
 the scene draw + the 8,549 unused ones). Per set, as superglance.builders.candidates.study: best = mean over scenes of the highest candidate
 PDMS; nearest = mean PDMS of the candidate with the smallest mean (x, y) waypoint distance to the human trajectory (float64).
   prep <navtrain_inputs.jsonl> <held-out list .jsonl (field t)> <evaluation tokens> <out dir>

@@ -1,6 +1,6 @@
 """The clustered candidates: k-means on the human 4-s trajectories of the NAVSIM training ("fit") scenes (8 waypoints x, y),
 heading = the cluster's mean heading, plus one standing-still trajectory. K = 4,096 gives the first 4,097 rows of the 5,121-candidate
-library; K = 1,024 and 256 the smaller sets of the supplement's coverage table. Same code and seed as
+library; K = 1,024 and 256 the smaller sets of the appendix's coverage table. Same code and seed as
 superglance.builders.candidates.study (k-means++ seeding on a 20,000-row sample, 30 Lloyd iterations; an empty cluster keeps its centre).
 usage: python -m superglance.builders.candidates.kmeans <navtrain_inputs.jsonl> <K> <out.npy> [compare.npy]"""
 import json

@@ -321,7 +321,7 @@ def main():
     ))
     lora_report = trainable_parameter_report(model)
     train = PermutationDataset(args.data / "train.jsonl", pair_mode=cfg["pair_mode"], seed=cfg["seed"], pair_rounds=args.pair_rounds)
-    # dev.jsonl is optional: it only selects the best checkpoint, and the paper's two QA runs kept their last step.
+    # dev.jsonl is optional: it only selects the best checkpoint (in stage 1 that was the last step).
     # Without it there is no evaluation and the last step is kept.
     dev = PermutationDataset(args.data / "dev.jsonl", pair_mode="swap", seed=cfg["seed"] + 100) \
         if (args.data / "dev.jsonl").exists() else None

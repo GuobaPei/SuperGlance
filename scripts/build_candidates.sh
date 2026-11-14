@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The candidate library (superglance.builders.candidates) and the supplement's coverage table, in the order the paper's were made:
+# The candidate library (superglance.builders.candidates) and the appendix's coverage table, in the order the paper's were made:
 #   kmeans    k-means 4,096 on the navtrain fit scenes' 4-s futures + one standing-still trajectory -> $OUT/cands_kmeans4096.npy (4,097)
 #   fast      + 1,024 high-speed candidates (k-means over the PAI-AV fit rows at >= 13 m/s) -> $OUT/cands_k4097_fast1024.npy (5,121)
 #   kprime    the 152 rule-built candidates of K' (braking, medium-speed curves and ramps) -> $OUT/kp/cands_k5273_v2.npy (5,273)

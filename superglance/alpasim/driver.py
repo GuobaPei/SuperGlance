@@ -303,7 +303,7 @@ def serve(args):
         from PIL import Image
     os.makedirs(args.frames, exist_ok=True)
     trace = open(os.path.join(args.frames, "decisions.jsonl"), "a")
-    lock = threading.Lock()   # ponytail: one model, one request at a time; a queue per GPU if rollouts run in parallel
+    lock = threading.Lock()   # one model, one request at a time; a queue per GPU if rollouts run in parallel
     executor = None
     if args.exec == "navsim":
         root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # the repo, for superglance.executor

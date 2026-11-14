@@ -18,7 +18,7 @@ set -uo pipefail
 exec 9>&-
 R=${1:?run dir}; A=${A:?AlpaSim checkout}; D=${NRE_D:?the data folder's nre-artifacts}; G=(${GPUS:-0 2 4 6})
 : "${NRE_RUN:?command that runs the renderer image on one GPU}"; WC=${WARP_CACHE:-$HOME/.cache/warp}
-log() { echo "[pai4 $(date -u +%FT%TZ)] $*"; }
+log() { echo "[alpasim $(date -u +%FT%TZ)] $*"; }
 ports() { python3 -c "import yaml; c = yaml.safe_load(open('$R/generated-network-config.yaml')); print(' '.join(e['address'].rsplit(':', 1)[1] for e in c['$1']['endpoints']))"; }
 up() { python3 -c "import socket,sys; s=socket.socket(); s.settimeout(2); sys.exit(s.connect_ex(('127.0.0.1', $1)))"; }
 RP=($(ports renderer)); PP=($(ports physics)); CP=$(ports controller); DP=($(ports driver))

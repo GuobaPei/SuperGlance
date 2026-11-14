@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stage-3 pools (SFT, the S1 last phase, and the K' reward columns of the RL pool) in the order the paper's pools were built. Their
+# Stage-3 pools (SFT, the last phase, and the K' reward columns of the RL pool) in the order the paper's pools were built. Their
 # NAVSIM, PAI-AV and WOD-E2E rows cannot be redistributed, so they are rebuilt from the source datasets. Steps:
 #   export   NAVSIM v1.1 navtrain / navtest scenes + metric caches -> $NAV/inputs/{navtrain,navtest}_inputs.jsonl (navsim env)
 #   score    the 5,121 candidates on every navtrain scene with the NAVSIM PDM scorer -> $OUT/score (scores.npz; q_t01b01.npz, the
@@ -12,7 +12,7 @@
 #   history  front-camera history: frames ($MF/hist_nav), rows ($MF/pool_sftmf), clean again as a check (0 rows drop)
 #   stage    rows, targets, images and history -> $SFT_POOL (the SFT pool), checked against $SFT_CONFIG
 #   last     WOD rows at training frames 135-165 -> $OUT/wod_last; $SFT_POOL with its WOD rows replaced, target t1 =
-#            softmax(proxy RFS / 0.5 - (ADE - min ADE) / 1 m) -> $S1_POOL
+#            softmax(proxy RFS / 0.5 - (ADE - min ADE) / 1 m) -> $LAST_POOL
 #   rl       the RL pool ($RL_POOL, 5,121 reward columns) with the K' candidates' reward columns appended -> $RL_OUT
 # Source shards (superglance.builders.shards, step "shards", under $SHARDS): navtrain (imitation targets) and navtrain_pdms (PDMS soft
 # targets from score's table: NAV_SHARD, the paper's), navtrain_os (OpenScene frames outside navtrain: OS_SHARD), pai_human/pNN
@@ -33,7 +33,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 : "${OUT:?output root}"
 NAV=${NAV:-$OUT/navsim}; MF=${MF:-$OUT/mf}; IMG=${IMG:-$OUT/img}; WOD_ROWS=${WOD_ROWS:-$OUT/wod_rows}; PROCS=${PROCS:-48}
-SFT_POOL=${SFT_POOL:-$OUT/sft_pool}; S1_POOL=${S1_POOL:-$OUT/s1_pool}; RL_OUT=${RL_OUT:-$OUT/rl_pool_kp}
+SFT_POOL=${SFT_POOL:-$OUT/sft_pool}; LAST_POOL=${LAST_POOL:-$OUT/last_pool}; RL_OUT=${RL_OUT:-$OUT/rl_pool_kp}
 SHARDS=${SHARDS:-$OUT/shards}; export SHARDS CANDS; L2D_DATA=${L2D_DATA:-$OUT/l2d_data}; RL5121=${RL5121:-$OUT/rl_pool}
 [ "${NAV_TARGET:-pdms}" = imitation ] && NAV_SHARD=${NAV_SHARD:-$SHARDS/navtrain} || NAV_SHARD=${NAV_SHARD:-$SHARDS/navtrain_pdms}
 DAGGER_SHARD=${DAGGER_SHARD:-$SHARDS/pai_dagger}; L2D_SHARD=${L2D_SHARD:-$SHARDS/l2d}; OS_SHARD=${OS_SHARD:-$SHARDS/navtrain_os}
@@ -84,7 +84,7 @@ for step in ${@:-export score shards wod qa dev merge clean paihist history stag
     merge) q merge "$OUT/pool_sft" "$NAV_SHARD" "$DAGGER_SHARD" "$OUT/shards/wod" "$OUT/shards/qa" $PAI_SHARDS "$OUT/shards/dev" \
              "$L2D_SHARD" "$OUT/shards/devl2d" "$OS_SHARD"
            mkdir -p "$IMG"; ln -sfn "$OUT/shards/img/qa" "$IMG/qa"
-           # ponytail: one cp per image (millions); run the copy with xargs -P if it is the bottleneck
+           # one cp per image (millions); run the copy with xargs -P if it is the bottleneck
            while IFS=$'\t' read -r s r; do [ -e "$IMG/$r" ] || { mkdir -p "$IMG/${r%/*}"; cp "$s" "$IMG/$r"; }; done < "$OUT/pool_sft/copies.tsv" ;;
     clean) q eval_keys "$OUT/eval_keys.json" "$PAI_CLIP_INDEX" "$PAI_GOLD" "$ALPASIM_916" "$SIM_SUITES" \
              "$NAV/inputs/navtest_inputs.jsonl" "$PAI_OPENLOOP"
@@ -96,7 +96,7 @@ for step in ${@:-export score shards wod qa dev merge clean paihist history stag
            q check "$SFT_POOL" "$SFT_CONFIG" ;;
     last) export WOD_ROWS SFT_POOL RL_DEV="$RL_DEV" IMG_ROOT="$IMG" LAST_ROWS="$OUT/wod_last"
           CANDS=$CANDS_KP q wod_last_phase rows "$OUT/wod_last"
-          CANDS=$CANDS_KP q wod_last_phase sftpool t1 "$SFT_POOL/train_targets.npy" "$SFT_POOL/hist" "$S1_POOL" ;;
+          CANDS=$CANDS_KP q wod_last_phase sftpool t1 "$SFT_POOL/train_targets.npy" "$SFT_POOL/hist" "$LAST_POOL" ;;
     rl) CANDS=$CANDS CHECK=$CHECK q rl_rewards_kprime "$RL_POOL" "$KP_W" "$RL_OUT" ;;
     *) echo "unknown step $step" >&2; exit 2 ;;
   esac

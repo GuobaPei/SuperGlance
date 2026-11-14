@@ -1,4 +1,4 @@
-"""The stage-3 trainer with a regression head (Table 8 and the supplement's One change at a time, "Linear regression"). The backbone and its LoRA are
+"""The stage-3 trainer with a regression head (Table 8 and the appendix's One change at a time, "Linear regression"). The backbone and its LoRA are
 the supervised model's, and there is one forward pass, as before. The Policy Head is replaced by a linear layer h -> 8 poses x (x, y,
 heading), trained with L1 against each trajectory row's logged future: the trajectory its softmax(-ADE) imitation target was measured
 against (superglance.ablations.traj_targets, TRAJ_DIR/{train,dev}_traj.npy, one [8, 3] per manifest line). A NaN heading is left out of

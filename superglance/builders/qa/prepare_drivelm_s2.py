@@ -2,8 +2,8 @@
 """Stage-2 driving items from DriveLM-nuScenes v1.1: box-choice localization and spatial-relation yes/no.
 
 Uses each key frame's key_object_infos ("<c1,CAM_FRONT,x,y>" -> Category, Status, Visual_description, 2d_bbox).
-  inspect   print the JSON structure (run first: the schema is taken from the DriveLM docs, not yet verified here)
-  generate  box-choice items (GT box vs jittered box, same drawing as control E) and relation minimal pairs
+  inspect   print the JSON structure (run first: the schema is taken from the DriveLM docs)
+  generate  box-choice items (GT box vs jittered box, same drawing as step e) and relation minimal pairs
             (left/right in the image; closer/farther by box bottom on flat ground), then perceptual-hash dedup
             against eval images (CV-Bench 3D contains nuScenes frames)
   qa        DriveLM's closed-form questions as choice rows: per-object questions on the object's camera image with

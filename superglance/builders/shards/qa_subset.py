@@ -43,7 +43,7 @@ def main(D, cfg, out, n_qa=61440, mult=3):
         shutil.copyfile(src, dst); return os.path.getsize(dst)
 
     stores = [x for x in jobs.items() if isinstance(x[1], tuple)]; files = [x for x in jobs.items() if not isinstance(x[1], tuple)]
-    nbytes = sum(map(put, stores))   # ponytail: one thread for the sqlite reads (a shared connection), 16 for plain file copies
+    nbytes = sum(map(put, stores))   # one thread for the sqlite reads (a shared connection), 16 for plain file copies
     with ThreadPoolExecutor(16) as ex:
         nbytes += sum(ex.map(put, files))
     with open(f"{out}/train_qa.jsonl", "w") as f:

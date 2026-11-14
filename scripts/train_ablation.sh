@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The ablation rows (Table 8, Table 7's "no instruction rows", and the supplement's One change at a time, RL step and AlpaSim
+# The ablation rows (Table 8, Table 7's "no instruction rows", and the appendix's One change at a time, RL step and AlpaSim
 # results by training recipe): each is the stage-3 step of scripts/train_stage3.sh with one switch (a config of
 # configs/ablations/, a pool, the start model or the trainer module). Supervised rows run 20,900 steps x 128 rows before the
 # last phase; RL rows 2,000 steps x 64 from a supervised row's checkpoint-20900, with the 5,121-candidate head. One row per call:
@@ -21,7 +21,7 @@
 #   POOL_RL_CF=... POOL_RL_IMIT=... POOL_RL_HIST=...] [OUT=runs/ablations] bash scripts/train_ablation.sh <row>
 # Evaluate a row's adapter ($OUT/<row>/train/final, or checkpoint-2000 for RL rows) as the main model: scripts/eval_navsim.sh,
 # eval_pai.sh, eval_wod.sh, eval_alpasim.sh with CANDS = the 5,121 library and HIST=0 for the current-frame rows; "No PDM simulator"
-# is the main model under eval_alpasim.sh with EXEC=plan; "no instruction" is eval_l2d.sh's control run.
+# is reward_history under eval_alpasim.sh with EXEC=plan; "no instruction" is eval_l2d.sh's control run.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 row=${1:?row name}; OUT=${OUT:-runs/ablations}; STAGE2=${STAGE2:-runs/stage2/merged}

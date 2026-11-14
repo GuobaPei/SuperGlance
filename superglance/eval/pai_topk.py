@@ -1,6 +1,6 @@
-"""The readout's number of candidates k and temperature on PAI-AV (supplement, Benchmark protocols): per features dir and k,
+"""The readout's number of candidates k and temperature on PAI-AV (appendix, Benchmark protocols): per features dir and k,
 ADE at 3 s / 5 s of the temperature-weighted mean over the head's top k, densified by the cubic spline, paired against k = 64
-and against the argmax with the spline, 95 % intervals over logs (10,000 resamples, seed 0). The supplement's k sweep runs
+and against the argmax with the spline, 95 % intervals over logs (10,000 resamples, seed 0). The appendix's k sweep runs
 <tau> 0.2 on the validation rows; its temperature choice compares k = 64 at 1, 0.5, 0.2, 0.1, 0.05 and 0.02.
 Checks (assert): k = 1 is the argmax candidate on every frame; k = 64 equals the plain top-64 mean on every frame.
 usage: python -m superglance.eval.pai_topk <rows.jsonl> <out.json> <tau> <k,k,...,all> <name>=<features dir>=<cands.npy> ..."""

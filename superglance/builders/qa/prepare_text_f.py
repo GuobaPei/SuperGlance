@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Text-only data for control F: train sources, held-out retention evals, and the F pool.
+"""Text-only data for step f: train sources, held-out retention evals, and the F pool.
 
 Every text row carries the same small blank image so text and image rows share one code path
 (an image-free micro-batch would skip the vision tower on some ranks). Steps:

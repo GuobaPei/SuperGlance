@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Control G data (= F + two targeted fixes): "directly above / underneath" pairs and "none of the other options".
+"""Data for step g (the f pool + two targeted fixes): "directly above / underneath" pairs and "none of the other options".
 
-1. Vertical relations. F still answers "yes" to "Is X directly above Y?" whenever X is higher in the image
+1. Vertical relations. The f-pool model still answers "yes" to "Is X directly above Y?" whenever X is higher in the image
    (3DSR location_above: 837 "yes" against 600). From upright OpenImages images, objects whose class occurs
    once (body parts and clothing-in-general excluded):
      yes     stacked pairs (no vertical overlap, gap <= 8% of the height, horizontal overlap >= 50% of the

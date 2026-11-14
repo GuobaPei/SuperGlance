@@ -4,7 +4,7 @@ the first actor centre in the 5.2 x 4 m box ahead of the ego, else in a 10 x 5.2
 lateral offset, its speed (0.5 s differences) and the ego's speed / a_x over the 6 s before contact. stopped = the actor's
 speed 2 s before contact <= 0.5 m/s; decel = it was moving 2 s before and lost >= 1 m/s since; its braking onset = its last
 speed peak in the 6 s (onset_s = onset to contact); ego_brake_s = the first ego a_x <= -1 m/s^2 after that onset, to contact
-(None: no braking before contact). The closing line has the supplement's counts: at-fault scenarios = the rows, front hits on
+(None: no braking before contact). The closing line has the appendix's counts: at-fault scenarios = the rows, front hits on
 a stopped actor (stopped true) and on a moving one (stopped false, decelerating ones included).
 usage (AlpaSim's environment): python -m superglance.alpasim.collisions <results-summary.clean.json>
   "<run dir>/rollouts/{c}/*/rollout.asl" <out.jsonl>   ({c} = the scenario's clipgt_id)

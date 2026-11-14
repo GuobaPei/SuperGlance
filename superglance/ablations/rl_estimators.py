@@ -1,4 +1,4 @@
-"""The RL step's estimators of the supplement's RL step table beside the paper's exact_rl (superglance.objectives.permutation.exact_rl_loss).
+"""The RL step's estimators of the appendix's RL step table beside the paper's exact_rl (superglance.objectives.permutation.exact_rl_loss).
   sampled_normalized  `samples` draws a ~ p per row (with replacement, detached), r = rewards[a], advantage A = (r - mean r) / (std r +
                       1e-6) within the draws, loss = -mean(A log p[a]) + kl * KL(p || softmax(ref)); with the two views of each row and
                       reward_samples 32, the table's "2 x 32"

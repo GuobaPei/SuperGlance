@@ -1,7 +1,7 @@
 """Coverage of NAVSIM scenes by k-means candidate sets: k-means on the human 4-s trajectories of the fit scenes (8 waypoints x, y;
 heading = the cluster's mean), K = 256 / 1,024 / 4,096, each plus a standing-still trajectory. Every candidate is scored on the given
 held-out scenes with the NAVSIM v1.1 PDM scorer (superglance.executor.pdm.score_pairs). Per set: the mean distance between neighbouring
-candidates (the supplement's "Spacing"), and the mean over scenes of the PDMS of the best candidate, of the candidate nearest the human
+candidates (the appendix's "Spacing"), and the mean over scenes of the PDMS of the best candidate, of the candidate nearest the human
 trajectory (mean waypoint distance), of the first choice of the target argmax(PDMS x DDC - 0.1 ADE) and of that choice's 3 nearest
 candidates. superglance.builders.candidates.coverage gives the table's best and nearest columns on all 10,549 held-out scenes.
 usage (NAVSIM environment): python -m superglance.builders.candidates.study <navtrain_inputs.jsonl> <codebook dir | -> <scene tokens>

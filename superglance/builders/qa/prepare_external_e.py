@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""External data for control E: box-choice localization and SpatialSense relations.
+"""External data for step e: box-choice localization and SpatialSense relations.
 
 All sources are non-COCO. Steps (run in order, each writes under --root):
   openimages   select BLINK-style box-choice items from OpenImages V5 val/test boxes

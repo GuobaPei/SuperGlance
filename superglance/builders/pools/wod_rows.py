@@ -27,7 +27,7 @@ RAYS = np.concatenate([xn, np.ones((len(xn), 1))], 1) @ R_F0.T   # every CAM_F0 
 _maps = {}
 
 
-def records(path):   # ponytail: TFRecord framing without TensorFlow (length, crc, data, crc); crcs not checked
+def records(path):   # TFRecord framing without TensorFlow (length, crc, data, crc); crcs not checked
     with open(path, "rb") as f:
         while len(h := f.read(12)) == 12:
             n = struct.unpack("<Q", h[:8])[0]; d = f.read(n); f.read(4); yield d
