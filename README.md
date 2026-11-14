@@ -17,7 +17,10 @@
 [Jieyuan Pei](https://scholar.google.com/citations?user=xAAOO_0AAAAJ)<sup>1,2,3*</sup>, Xin Yan<sup>4*</sup>, [Mingwei Xu](https://scholar.google.com/citations?user=jOZPNeQAAAAJ)<sup>5</sup>, Haiyi Zhang<sup>3</sup>, Siyu Zou<sup>2</sup>, Zhangyi Hu<sup>2,3</sup>,<br>
 Zhuoxuan Li<sup>6</sup>, Yuguang Yang<sup>7</sup>, [Rongjunchen Zhang](https://scholar.google.com/citations?user=Ae41dcUAAAAJ)<sup>2†</sup>, Cheng Chi<sup>6</sup>, Hui Xiong<sup>3✉</sup>, [Yan Wang](https://scholar.google.com/citations?user=QOZnsYYAAAAJ)<sup>1✉</sup>
 
-<sub><sup>1</sup>Institute for AI Industry Research (AIR), Tsinghua University · <sup>2</sup>HiThink Research · <sup>3</sup>The Hong Kong University of Science and Technology (Guangzhou) · <sup>4</sup>Agency for Science, Technology and Research (A&#42;STAR), Singapore · <sup>5</sup>University of Washington · <sup>6</sup>Renmin University of China · <sup>7</sup>Beihang University</sub><br>
+<sub><sup>1</sup>Institute for AI Industry Research (AIR), Tsinghua University · <sup>2</sup>HiThink Research</sub><br>
+<sub><sup>3</sup>The Hong Kong University of Science and Technology (Guangzhou)</sub><br>
+<sub><sup>4</sup>Agency for Science, Technology and Research (A&#42;STAR), Singapore</sub><br>
+<sub><sup>5</sup>University of Washington · <sup>6</sup>Renmin University of China · <sup>7</sup>Beihang University</sub><br>
 <sub><sup>&#42;</sup>Equal contribution · <sup>†</sup>Project leader · <sup>✉</sup>Corresponding authors</sub>
 
 </div>
