@@ -27,7 +27,7 @@ Zhuoxuan Li<sup>6</sup>, Yuguang Yang<sup>7</sup>, [Rongjunchen Zhang](https://s
 </div>
 
 <p align="center"><img src="docs/teaser.png" width="100%" alt="GPU time per plan, driving benchmarks and question answering"></p>
-<p align="center"><sub>SuperGlance plans in one forward pass, 6.2 times faster than Qwen-Drive-1.0, and leads it on ten of eleven QA benchmarks and on every driving benchmark (Figure 1 of the paper; ring bars start above zero).</sub></p>
+<p align="center"><sub>SuperGlance plans in one pass, 6.2 times faster than Qwen-Drive-1.0, and is at or above it on ten of eleven QA and all driving benchmarks (Figure 1 of the paper; middle: Qwen-Drive-1.0 at its best per benchmark; ring bars start above zero; longer ADE bars mean lower error).</sub></p>
 
 ## News
 
@@ -42,7 +42,8 @@ Zhuoxuan Li<sup>6</sup>, Yuguang Yang<sup>7</sup>, [Rongjunchen Zhang](https://s
 
 ## Method
 
-<p align="center"><img src="docs/arch.png" width="95%" alt="SuperGlance architecture"></p>
+<p align="center"><img src="docs/arch.png" width="95%" alt="Three ways a vision-language model produces a plan"></p>
+<p align="center"><sub>Three ways a vision-language model produces a plan (Figure 2 of the paper). Only (c) has no loop: SuperGlance reads the last hidden state h once, at [ANS], and its Policy Head gives a probability (outline width and opacity) to each of 5,273 fixed candidates; for questions, the LM head gives one to each option letter. Each bottom strip shows one plan's measured GPU time to scale; in (a), our VLM writing text runs off its axis.</sub></p>
 
 SuperGlance turns a vision-language model (VLM) into a driving policy that plans in one forward pass. The model reads the
 front camera (the current frame and three past frames), the ego state and the navigation command. A linear Policy Head on
@@ -51,7 +52,7 @@ plan is the probability-weighted mean of the 64 most probable candidates at temp
 state answers multiple-choice questions through the language-model head's option-letter logits, also without generating.
 The VLM is Qwen3.5-9B with rank-32 LoRA adapters, trained in three stages: multiple-choice question answering on general
 images and text (stage 1) and on driving scenes (stage 2) keeps the VLM's visual abilities; stage 3 trains the policy,
-first supervised toward a reward-weighted target over the candidates, then with reinforcement learning (RL) on the exact
+first toward a supervised target that can weight candidates by reward, then with reinforcement learning (RL) on the exact
 expected reward over all candidates.
 
 | stage | data | objective | start | steps x rows |
@@ -81,7 +82,7 @@ The final model, SuperGlance-9B, as reported in the paper:
 | GPU time per plan (one H200) | ms | 84 |
 
 <p align="center"><img src="docs/latency.png" width="100%" alt="Time per plan and distance in closed loop"></p>
-<p align="center"><sub>Time per plan and distance in closed loop (Figure 6 of the paper). Top: 84 ms of GPU time per plan in our single pass, 518 ms in Qwen-Drive-1.0 with 10 flow steps and 5,558 ms when our VLM writes the plan as text. Bottom: in AlpaSim, with each time as the plan's delay, km per at-fault incident holds for both planners up to 300 ms and drops beyond.</sub></p>
+<p align="center"><sub>Time per plan and distance in closed loop (Figure 6 of the paper). Top: 84 ms of GPU time per plan in our single pass, 518 ms in Qwen-Drive-1.0 with 10 flow steps and 5,558 ms when our VLM writes the plan as text. Bottom: in AlpaSim, each time (dashed) becomes the next 100-ms lag; both planners keep their km per at-fault incident within 8% up to 300 ms, and it drops beyond. At 5 s every plan arrives after its last pose (hollow): both planners drive more slowly and vehicles behind hit them, which is not at fault and ends the scenario as a pass.</sub></p>
 
 ## Installation
 
@@ -323,8 +324,8 @@ WOD_TEST=<test TFRecord shards> WOD_LIST=<test_sequence_frames_for_submission_as
 ```
 
 The WOD-E2E protos come from the `waymo-open-dataset` package, or set `WOD_PROTOS` to the Python modules generated from its
-`.proto` files. The script builds the rows of the listed frames (front camera, re-projected to CAM_F0; the test split has
-no past frames), extracts the features, reads `mean02` (the paper's readout) and `mbr02`, and writes and checks one
+`.proto` files. The script builds the rows of the listed frames (FRONT, FRONT_LEFT and FRONT_RIGHT re-projected into CAM_F0 by
+rotation; the test split has no past frames), extracts the features, reads `mean02` (the paper's readout) and `mbr02`, and writes and checks one
 submission package per readout (`runs/wod/sub/`). It uploads nothing: it prints the `wod_submit fill` command for the
 account, method and author fields, and the filled `mean02` package is uploaded on the challenge page. Table 5's row is the
 server's RFS and ADE of that package.
